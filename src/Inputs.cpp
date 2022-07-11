@@ -34,7 +34,7 @@ bool seqButtonNow[16] =             {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // Lit
 bool seqButtonState[16] =           {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // What do we calculate the state to be
 bool seqButtonStatePrev[16] =       {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // What was the last calculated state
 bool seqButtonsNewQuickpress[16] =  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // Track if there was a new press + release
-elapsedMillis seqButtonOntime[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // How long have buttone been pressed
+elapsedMillis seqButtonOntime[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};    // How long have buttone been pressed                            
 
 uint16_t knobAndJoystickNow[8] =  {0,0,0,0,0,0,0,0};
 uint16_t knobAndJoystickPrev[8] = {0,0,0,0,0,0,0,0};
@@ -197,18 +197,22 @@ void processInputs(Sequencer& seq)
     if (seqButtonsNewQuickpress[i]) 
     {
       seq.stepFlipStateAtIndex(i);
-      (seq.getStepStateAtIndex(i)) ? strip.setPixelColor(i  , seq.getDefaultStepColor()) : strip.setPixelColor(i  , 0);
+      (seq.getStepStateAtIndex(i)) ? strip.setPixelColor(i, seq.getStepColorAtIndex(i)) : strip.setPixelColor(i  , 0);
       seqButtonsNewQuickpress[i] = false;            
     }
 
     //   2)  Button is being held... listen for other knob twists n such
     if (seqButtonOntime[i] > longPressMillis)
     {
+
+      drawInfoBar("Editing Step: ", i);
+
       if (sliderAChanged())
       {
         int8_t sliderAValMapped = map(sliderAVal(), 0, 100, -50, 50);
         int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
-        draw_sliders(sliderAValMapped, sliderBValMapped);
+        update_sliders(sliderAValMapped, sliderBValMapped);
+        // draw_sliders(sliderAValMapped, sliderBValMapped);
         seq.setSwingAtIndex(i, sliderAValMapped);
       }
       if (sliderBChanged())
@@ -218,6 +222,7 @@ void processInputs(Sequencer& seq)
         int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
         uint16_t  envelopeVal = ((sliderBVal()+1) * 10);
         //draw_sliders(sliderAValMapped, sliderBValMapped);
+        update_sliders(sliderAValMapped, sliderBValMapped);
         seq.setStepDecayAtIndex(i, envelopeVal);
       }
 

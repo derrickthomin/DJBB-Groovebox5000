@@ -105,9 +105,9 @@ template <typename C, typename B, int W = 128, int H = 128>
 class SSD1351 : public Print {
 public:
 	SSD1351(
-		uint8_t _cs = 10,
-		uint8_t _dc = 15,
-		uint8_t _reset = 14,
+		uint8_t _cs = 26,
+		uint8_t _dc = 30,
+		uint8_t _reset = -1,
 		uint8_t _mosi=11,
 		uint8_t _sclk=13
 	) : cs(_cs), dc(_dc), reset(_reset), mosi(_mosi), sclk(_sclk) {}
@@ -120,13 +120,12 @@ public:
 
 		// verify SPI pins are valid;
 		if (SPI.pinIsMOSI(mosi) && SPI.pinIsSCK(sclk)) {
-			SPI.setMOSI(mosi);
-			SPI.setSCK(sclk);
+			// SPI.setMOSI(mosi);
+			// SPI.setSCK(sclk);
 		} else {
 			Serial.println("SPI pins are invalid.");
 			return;
 		}
-
 		SPI.begin();
 
 #ifdef KINETISK
@@ -496,6 +495,55 @@ public:
 	void setFont(const GFXfont &new_font) {
 	    font = (GFXfont *)&new_font;
 	}
+
+	void setRotation(uint8_t r) 
+	{
+		// madctl bits:
+		// 6,7 Color depth (01 = 64K)
+		// 5   Odd/even split COM (0: disable, 1: enable)
+		// 4   Scan direction (0: top-down, 1: bottom-up)
+		// 3   Reserved
+		// 2   Color remap (0: A->B->C, 1: C->B->A)
+		// 1   Column remap (0: 0-127, 1: 127-0)
+		// 0   Address increment (0: horizontal, 1: vertical)
+		uint16_t _width;
+		uint16_t _height;
+		uint16_t WIDTH = 128;
+		uint16_t HEIGHT = 128;
+
+		uint8_t madctl = 0b01100100; // 64K, enable split, CBA
+
+		uint8_t rotation = r & 3; // Clip input to valid range
+
+		switch (rotation) {
+		case 0:
+			madctl |= 0b00010000; // Scan bottom-up
+			_width = WIDTH;
+			_height = HEIGHT;
+			break;
+		case 1:
+			madctl |= 0b00010011; // Scan bottom-up, column remap 127-0, vertical
+			_width = HEIGHT;
+			_height = WIDTH;
+			break;
+		case 2:
+			madctl |= 0b00000010; // Column remap 127-0
+			_width = WIDTH;
+			_height = HEIGHT;
+			break;
+		case 3:
+			madctl |= 0b00000001; // Vertical
+			_width = HEIGHT;
+			_height = WIDTH;
+			break;
+		}
+
+		sendCommand(SSD1351_CMD_SETREMAP, &madctl, 1);
+		uint8_t startline = (rotation < 2) ? HEIGHT : 0;
+		sendCommand(SSD1351_CMD_STARTLINE, &startline, 1);
+	}
+
+
 
 	void drawText(const char *str, int16_t x, int16_t y, uint8_t align=ALIGN_LEFT) {
 		uint8_t string_length = strlen(str);

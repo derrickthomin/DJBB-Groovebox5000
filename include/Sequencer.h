@@ -26,9 +26,10 @@ class Step {
         uint8_t assignedVoice;         // Track which voice to use when this hits.
         Voice* voice;                  // Store pointer to a voice object
         uint32_t color;
+        uint8_t colorSetIDXstp;
         
     public:
-        Step();
+        Step(uint8_t colorSetIDX);
 
         void playNote(void);          // Play note from the current voice
 
@@ -37,7 +38,7 @@ class Step {
         bool     getStepState(void) {return state;}
         int32_t  getSwingMicros(void) {return swingMcros;}
         bool     getPlayingState(void){return played;}
-        int32_t  getColor(void){return color;}
+        uint32_t  getColor(void){return color;}
         uint8_t  getVoiceNumber(void){return voice -> getID();}
         uint16_t getVoiceAttack(void){return voice -> getAttack();}
 
@@ -63,11 +64,11 @@ class Step {
 class Sequencer {
 
     private:
-        bool playingState;               // Is the sequencer currently playing
-        bool stepPlayed;                 // Track if we already played a note for this step
+        bool    playingState;               // Is the sequencer currently playing
+        bool    stepPlayed;                 // Track if we already played a note for this step
         uint8_t numSteps;
         uint8_t currentStep;
-        int8_t lastPlayedStep;
+        int8_t  lastPlayedStep;
         uint8_t bpm;
         uint8_t startingStep;
         unsigned long microsecondsPerStep;
@@ -79,6 +80,7 @@ class Sequencer {
 
     public:
         std::vector<Step> steps;
+        int8_t colorSetIDX;                // corresponsds to a set of 5 colors
         uint32_t color;                    // Color of the scrolling seq light
         Sequencer(uint8_t, uint8_t);
         void initializeSteps(void);
@@ -93,6 +95,7 @@ class Sequencer {
         // -------- Getters --------//
         uint8_t getStartingStep(void);
         bool    getPlayingState(void);
+        uint8_t getLastPlayedStep(void);
         bool    getStepStateAtIndex(uint8_t idx);
         uint8_t getCurrentStepNumber(void);
         uint8_t getNumSteps(void);
@@ -115,6 +118,7 @@ class Sequencer {
         bool    getNextStepPlayedState(void){return steps[getNextStepNumber()].getPlayingState();}
 
         uint16_t  getCurrentVoiceAttack(void){return steps[getCurrentStepNumber()].getVoiceAttack();}
+        uint32_t  getStepColorAtIndex(uint8_t idx);
 
 
         // -------- Setters --------//

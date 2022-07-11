@@ -21,6 +21,7 @@
 #define SDCARD_CS_PIN    10
 #define SDCARD_MOSI_PIN  7
 #define SDCARD_SCK_PIN   14
+#define DEFAULT_NEOPIX_BRIGHTNESS 2   // Out of like 200 or som. 
 
 // ********** SET TO TRUE TO PRINT TEST STUFF **************
 
@@ -65,6 +66,7 @@ void loop()
     inputsChanged = checkAllInputs();   // 1. Check all of our inputs
     processInputs(sequencer_1);         // 2. If any changed, do something in response.
     inputCheckTimer = millis();
+    checkInfoBar();                     // 3. See if we need to erase an info bar. 
   }
 
   if (!sequencer_1.getPlayingState()){
@@ -74,22 +76,16 @@ void loop()
 
   if (sequencer_1.newNote())
   {
-    sequencer_1.steps[sequencer_1.getCurrentStepNumber()].playNote();
-
-    if (stepTesting) sequencer_1.debugPrintSeqData("1)  Right after new note is triggered", true);
+    sequencer_1.steps[sequencer_1.getLastPlayedStep()].playNote();
     sequencer_1.calcNextNoteTime(true);  // Just played a note... calculate the next onez
-    if (stepTesting) sequencer_1.debugPrintSeqData("2)  Right after next note time is calculated");
   }
 
   if (sequencer_1.newStep()) 
   { 
-    if (stepTesting) Serial.println("");
-    if (stepTesting) Serial.println("---> Just incremented to Step #... + \t" + String(sequencer_1.getCurrentStepNumber()));
-    if (stepTesting) sequencer_1.debugPrintSeqData("3)  In new step loop, before doing any calculations");
     sequencer_1.calcNextNoteTime(false);
-    if (stepTesting)  sequencer_1.debugPrintSeqData("4)  In new step loop, AFTER calculating next note time");
-    strip.setPixelColor(sequencer_1.getCurrentStepNumber(), sequencer_1.color);           // Light Current neopixel
-    strip.setPixelColor(sequencer_1.getPrevStepNumber()  , 0);                // Clear previous neopixel
+
+    strip.setPixelColor(sequencer_1.getCurrentStepNumber(), sequencer_1.color);                 // Light Current neopixel
+    strip.setPixelColor(sequencer_1.getPrevStepNumber() , 0);                                   // Clear previous neopixel
 
     if (sequencer_1.getPreviousStepState())
     {
@@ -102,17 +98,17 @@ void loop()
     
   
   //Enable for memory and processor  diagnostics
-  if (millis()-last_time_print > 100){
-    Serial.print(F("all="));
-    Serial.print(AudioProcessorUsage());
-    Serial.print(F(","));
-    Serial.print(AudioProcessorUsageMax());
-    Serial.print(F("    "));
-    Serial.print(F("Memory: "));
-    Serial.print(AudioMemoryUsage());
-    Serial.print(F(","));
-    Serial.println(AudioMemoryUsageMax());
-    last_time_print = millis();
-  }
+  // if (millis()-last_time_print > 100){
+  //   Serial.print(F("all="));
+  //   Serial.print(AudioProcessorUsage());
+  //   Serial.print(F(","));
+  //   Serial.print(AudioProcessorUsageMax());
+  //   Serial.print(F("    "));
+  //   Serial.print(F("Memory: "));
+  //   Serial.print(AudioMemoryUsage());
+  //   Serial.print(F(","));
+  //   Serial.println(AudioMemoryUsageMax());
+  //   last_time_print = millis();
+  // }
   
 }

@@ -4,7 +4,7 @@
 #include "Sequencer.h" 
 #include "Display.h"
 
-Step::Step()
+Step::Step(uint8_t colorSetIDX)
 {
     state = false;
     played = false;
@@ -17,12 +17,15 @@ Step::Step()
     reverbSendLevel = 0;  
     delaySendLevel = 0;
     ratchetCount = 0;
-    assignedVoice = 1;         // Track which voice to use when this hits. 
-    color = BLUE_NEOPIX;      
+    assignedVoice = 1;         // Track which voice to use when this hits. z
+    colorSetIDXstp = colorSetIDX;
+    color = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
 }
-
 Sequencer::Sequencer(uint8_t a, uint8_t b)
 {
+    colorSetIDX = 6;
+    color = get_neopix_color_by_idx(colorSetIDX,3);
+    defaultStepColor = color;
     playingState = false;
     stepPlayed = false;
     numSteps = a;
@@ -32,9 +35,7 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
     microsecondsPerStep = 60 * 1000 * 1000 / (bpm * 4);    // 4 = 16th notes. 1 = 1/4 notes. Etc.
     maxSwingMicros = (microsecondsPerStep / 2) - 400;     // Set max swing to a little less than half of a step 
     microsecondsNextStep = microsecondsPerStep;            // Track this separately... may need to apply swing and play a note early or late.    
-    microsecondsNextNote = microsecondsPerStep;  
-    color = RED_NEOPIX;     
-    defaultStepColor = BLUE_NEOPIX;               
+    microsecondsNextNote = microsecondsPerStep;              
 }
 
 /*
@@ -49,6 +50,7 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
 */
 uint8_t Sequencer::getStartingStep(void) {return startingStep;}
 bool    Sequencer::getPlayingState(void) {return playingState;}
+uint8_t Sequencer::getLastPlayedStep(void){return lastPlayedStep;}
 bool    Sequencer::getStepStateAtIndex(uint8_t idx){return steps[idx].getStepState();}
 uint8_t Sequencer::getCurrentStepNumber(void) {return currentStep;}
 uint8_t Sequencer::getNumSteps(void) {return numSteps;}
@@ -57,6 +59,7 @@ int32_t Sequencer::getNextStepSwing(void){return steps[getNextStepNumber()].getS
 int32_t Sequencer::getCurrentStepSwing(void){return steps[getCurrentStepNumber()].getSwingMicros();};
 bool    Sequencer::getPlayStateAtIndex(uint8_t idx){return steps[idx].getPlayingState();}
 int32_t Sequencer::getStpSwingAtIndex(uint8_t idx){return steps[idx].getSwingMicros();}
+uint32_t  Sequencer::getStepColorAtIndex(uint8_t idx){return steps[idx].getColor();}
 
 bool Sequencer::getPreviousStepState(void)
 {
@@ -234,7 +237,7 @@ void Sequencer::initializeSteps(void)
 {
     for (uint8_t i = 0; i < numSteps; i++) 
     {
-       steps.push_back(Step());
+       steps.push_back(Step(Sequencer::colorSetIDX));
     }
 }
 

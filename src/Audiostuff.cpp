@@ -62,9 +62,9 @@ void initAudio(void)
   sgtl5000_1.lineOutLevel(13);
 
   new Voice(&playSdWav1, &envelope1_L, &envelope1_R);  // djt - jjust for testing... make a few and put into array
-  new Voice(&playSdWav2, &envelope2_L, &envelope2_R);  // djt - jjust for testing... make a few and put into array
-  new Voice(&playSdWav3, &envelope3_L, &envelope3_R);  // djt - jjust for testing... make a few and put into array
-  new Voice(&playSdWav4, &envelope4_L, &envelope4_R);  // djt - jjust for testing... make a few and put into array
+  // new Voice(&playSdWav2, &envelope2_L, &envelope2_R);  // djt - jjust for testing... make a few and put into array
+  // new Voice(&playSdWav3, &envelope3_L, &envelope3_R);  // djt - jjust for testing... make a few and put into array
+  // new Voice(&playSdWav4, &envelope4_L, &envelope4_R);  // djt - jjust for testing... make a few and put into array
 
   AudioInterrupts();
   // // TESTING
@@ -124,12 +124,12 @@ Voice::Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffect
   envelope_r -> releaseNoteOn(8);
  
  // DJT TESTING 
-  sampleFilename = "kik.WAV";
-  if (numVoices % 2 == 0)
-  {
-    Serial.println("Assign a clap!!!!!!!!!!!");
-    sampleFilename = "clp.WAV";
-  }
+  sampleFilename = "hat.WAV";
+  // if (numVoices % 2 == 0)
+  // {
+  //   Serial.println("Assign a clap!!!!!!!!!!!");
+  //   sampleFilename = "clp.WAV";
+  // }
 }
 
 void Voice::assignDefaultVoicesForSequencer(Sequencer* seq)
