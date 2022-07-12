@@ -16,22 +16,22 @@
 #include "Sequencer.h"
 #include "Display.h"
 
-#define NUM_LEDS   16
-#define NEOPIX_PIN 9
-#define SDCARD_CS_PIN    10
-#define SDCARD_MOSI_PIN  7
-#define SDCARD_SCK_PIN   14
-#define DEFAULT_NEOPIX_BRIGHTNESS 2   // Out of like 200 or som. 
+#define NUM_LEDS          16
+#define NEOPIX_PIN        9
+#define SDCARD_CS_PIN     10
+#define SDCARD_MOSI_PIN   7
+#define SDCARD_SCK_PIN    14
+#define NEOPIX_BRIGHTNESS 2    // Out of like 200 or som. 
 
 // ********** SET TO TRUE TO PRINT TEST STUFF **************
 
 const bool stepTesting = false;               // Set to false to get rid of serial print stuff
-uint32_t last_time_print = millis();
+uint32_t   last_time_print = millis();
 
 // ********** SET TO TRUE TO PRINT TEST STUFF **************
 
 bool sdStatus;            // sd card status
-Sequencer sequencer_1 (16, 150);
+Sequencer sequencer_1 (16, 120);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, NEOPIX_PIN, NEO_GRB + NEO_KHZ800);
 unsigned long inputCheckTimer = millis();
 unsigned long inputCheckPeriod = 50;       // Only check every 50 ms
@@ -45,7 +45,7 @@ void setup()
   inputSetup();
   initOled();
   strip.begin();
-  strip.setBrightness(2);
+  strip.setBrightness(NEOPIX_BRIGHTNESS);
   Serial.println(Voice::allVoices[0]->getAttack());
 
   // //------ SD Card
@@ -69,21 +69,20 @@ void loop()
     checkInfoBar();                     // 3. See if we need to erase an info bar. 
   }
 
-  if (!sequencer_1.getPlayingState()){
+  if (!sequencer_1.getPlayingState()){  // Not currently playing - bail early.
     strip.show();
     return;
   }
 
   if (sequencer_1.newNote())
   {
-    sequencer_1.steps[sequencer_1.getLastPlayedStep()].playNote();
-    sequencer_1.calcNextNoteTime(true);  // Just played a note... calculate the next onez
+    sequencer_1.steps[sequencer_1.getLastPlayedStep()].playNote();                             // Last played step is kinda weird. It represents the step we want to play NOW since we already incremented it in newnote.
+    sequencer_1.calcNextNoteTime(true);  
   }
 
   if (sequencer_1.newStep()) 
   { 
     sequencer_1.calcNextNoteTime(false);
-
     strip.setPixelColor(sequencer_1.getCurrentStepNumber(), sequencer_1.color);                 // Light Current neopixel
     strip.setPixelColor(sequencer_1.getPrevStepNumber() , 0);                                   // Clear previous neopixel
 
@@ -96,7 +95,7 @@ void loop()
     strip.show();
   }
     
-  
+
   //Enable for memory and processor  diagnostics
   // if (millis()-last_time_print > 100){
   //   Serial.print(F("all="));

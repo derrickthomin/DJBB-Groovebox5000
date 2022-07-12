@@ -9,7 +9,6 @@ extern Adafruit_NeoPixel strip;
 
 // Need to track each step individually for param locks and suck
 class Step {
-
     private:
 
         bool state;                     // Is it on or nah?

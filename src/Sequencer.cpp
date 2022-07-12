@@ -48,17 +48,18 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
 
 ********************************************************************************** 
 */
-uint8_t Sequencer::getStartingStep(void) {return startingStep;}
-bool    Sequencer::getPlayingState(void) {return playingState;}
-uint8_t Sequencer::getLastPlayedStep(void){return lastPlayedStep;}
-bool    Sequencer::getStepStateAtIndex(uint8_t idx){return steps[idx].getStepState();}
-uint8_t Sequencer::getCurrentStepNumber(void) {return currentStep;}
-uint8_t Sequencer::getNumSteps(void) {return numSteps;}
-bool    Sequencer::getCurrentStepState(void){return steps[currentStep].getStepState();}
-int32_t Sequencer::getNextStepSwing(void){return steps[getNextStepNumber()].getSwingMicros();}
-int32_t Sequencer::getCurrentStepSwing(void){return steps[getCurrentStepNumber()].getSwingMicros();};
-bool    Sequencer::getPlayStateAtIndex(uint8_t idx){return steps[idx].getPlayingState();}
-int32_t Sequencer::getStpSwingAtIndex(uint8_t idx){return steps[idx].getSwingMicros();}
+
+uint8_t   Sequencer::getStartingStep(void) {return startingStep;}
+bool      Sequencer::getPlayingState(void) {return playingState;}
+uint8_t   Sequencer::getLastPlayedStep(void){return lastPlayedStep;}
+bool      Sequencer::getStepStateAtIndex(uint8_t idx){return steps[idx].getStepState();}
+uint8_t   Sequencer::getCurrentStepNumber(void) {return currentStep;}
+uint8_t   Sequencer::getNumSteps(void) {return numSteps;}
+bool      Sequencer::getCurrentStepState(void){return steps[currentStep].getStepState();}
+int32_t   Sequencer::getNextStepSwing(void){return steps[getNextStepNumber()].getSwingMicros();}
+int32_t   Sequencer::getCurrentStepSwing(void){return steps[getCurrentStepNumber()].getSwingMicros();};
+bool      Sequencer::getPlayStateAtIndex(uint8_t idx){return steps[idx].getPlayingState();}
+int32_t   Sequencer::getStpSwingAtIndex(uint8_t idx){return steps[idx].getSwingMicros();}
 uint32_t  Sequencer::getStepColorAtIndex(uint8_t idx){return steps[idx].getColor();}
 
 bool Sequencer::getPreviousStepState(void)
@@ -154,12 +155,13 @@ void Sequencer::setStepSwingMillisAtIndex(uint8_t idx, int16_t swingMillis){step
 void Sequencer::setStepRatchetCountAtIndex(uint8_t idx, uint8_t count){steps[idx].setRatchetCount(count);}
 void Sequencer::setPlayStateAtIndex(uint8_t idx, bool playstate){steps[idx].setPlayingState(playstate);}
 void Sequencer::setStepColorAtIndex(uint8_t idx, uint16_t color){steps[idx].setColor(color);}
+void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
 
 void Sequencer::reset(void)
 {
-    for (uint8_t i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < numSteps; i++)
     {
-        (getStepStateAtIndex(i)) ? strip.setPixelColor(i, getDefaultStepColor()) : strip.setPixelColor(i, 0);
+        (getStepStateAtIndex(i)) ? strip.setPixelColor(i, getStepColorAtIndex(i)) : strip.setPixelColor(i, 0);
     }
     currentStep = startingStep;
 }
@@ -241,9 +243,15 @@ void Sequencer::initializeSteps(void)
     }
 }
 
+/*
+    This one was tricky to figure out so documenting... the basic logic is:
+        1. 
+
+*/
+
 void Sequencer::calcNextNoteTime(bool midStepCalc = false)
 {
-    if (!midStepCalc)   // Calculating RIGHT after incrementing the step
+    if (!midStepCalc)   // Calculating RIGHT after incrementing the step. 
     {
         if (getCurrentStepSwing() >= 0)
         {
@@ -282,8 +290,6 @@ void Sequencer::calcNextNoteTime(bool midStepCalc = false)
     microsecondsNextNote = microsecondsPerStep + (getNextStepSwing());    // Default state.. simply add the swing offset 
 
 }
-
-void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
  
 /*
 **********************************     DEBUG     *********************************

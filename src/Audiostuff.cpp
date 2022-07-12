@@ -124,7 +124,7 @@ Voice::Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffect
   envelope_r -> releaseNoteOn(8);
  
  // DJT TESTING 
-  sampleFilename = "hat.WAV";
+  sampleFilename = "clp.WAV";
   // if (numVoices % 2 == 0)
   // {
   //   Serial.println("Assign a clap!!!!!!!!!!!");

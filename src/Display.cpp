@@ -20,17 +20,42 @@ Display stuff. Classes / functions related to screen updates / neopixel updates,
 
 Adafruit_SSD1351 oled = Adafruit_SSD1351(CS_PIN, DC_PIN, RST_PIN);  
 
-// Test new color lib
-//typedef ssd1351::LowColor Color;
-//auto oled = ssd1351::SSD1351<Color, ssd1351::SingleBuffer, 128, 128>();
-
 const std::vector<std::vector<uint16_t>> colors{reds, blues, greens, pinks, yellows, oranges, purples};  // All colors
 const std::vector<std::vector<uint32_t>> all_colors_neopix {reds_neopix, blues_neopix, greens_neopix, pinks_neopix, yellows_neopix, oranges_neopix, purples_neopix};
 bool infoBarActive = false; 
 char * prevInfoText;
 int16_t prevInfoVal;
-uint32_t lastInfobarMillis =         millis();   // when did we last show a new info bar
+uint32_t lastInfobarMillis = millis();          // when did we last show a new info bar
 const uint16_t infoBarDispTime = 700;           // How many millis until the banner goes awasy
+
+/*
+***************************   Menus   **********************************
+
+                    Each represents a "screen". 
+
+            Each should include:
+                - A total refresh (draw the whole thing
+
+************************************************************************
+*/
+
+/*
+    Default menu (for now... ). This menu is where you can hold buttons to 
+    change p-lock params, etc.
+*/
+
+struct
+{
+    char* title   = "     Step Edit";
+    uint16_t titleColor = YELLOW_5;
+
+    // functions
+    void drawTitleBarMnu(void)                    // Draws the top title bar
+    {
+        drawTitleBar(title, titleColor);
+    }
+} menuStepEdit;
+
 
 /*
 *************************** Helper variables **************************
@@ -46,9 +71,11 @@ const uint8_t screen_qtr_3_x = screen_qtr_2_x * 2;
 const uint8_t screen_qtr_4_x = screen_qtr_2_x * 3;
 const uint8_t screen_bot_info_y = 80;                 // Below here we can show pot values, etc.
 const uint8_t screen_pot_radius = 8;
-const uint8_t infoBarHeight     = 15;
+const uint8_t infoBarHeight     = 17;
+const uint8_t infobarY          = infoBarHeight - 1;
+const uint8_t infobarX          = 3;
+const uint8_t infoBarLineWidth  = SCREEN_WIDTH - infobarX * 2;
   
-
 // Slider stuff
 const uint16_t sliderWidth = 13;    // in pixels - How wide the slider is
 const uint16_t sliderHeight= 60;    // in pixels - How tall the slider is
@@ -271,22 +298,38 @@ void drawInfoBar(char * text, int16_t displayVal = -1)
 {
     lastInfobarMillis = millis();   // Reset timer... still hodling the button or whatever.
 
-    if (prevInfoText == text && prevInfoVal == displayVal) return;  
+    if (prevInfoText == text && prevInfoVal == displayVal && infoBarActive) return;  
 
-    oled.fillRoundRect(2,2,SCREEN_HEIGHT-4, infoBarHeight, 3, BLACK);
-    oled.fillRoundRect(2,2,SCREEN_HEIGHT-4, infoBarHeight, 3, PURPLE_5);
-    oled.setTextColor(BLACK);
-    oled.setCursor(6, infoBarHeight/2);
+    eraseInfoBar();
+    oled.setTextColor(WHITE);
+    oled.setCursor(6, (infoBarHeight/2 - 1));
     oled.print(text);
     oled.print(displayVal);
-    infoBarSetStatus(true);
     prevInfoText = text;
+    FUNderline(infobarX, infobarY, infoBarLineWidth, YELLOW_5);
     prevInfoVal = displayVal;
+    infoBarSetStatus(true);
+}
+
+void drawTitleBar(char * text, uint16_t color)
+{
+    uint8_t baseX = 7;
+    eraseInfoBar();
+    oled.drawRoundRect(2,2,SCREEN_WIDTH-4, infoBarHeight, 3, color);
+    oled.fillRoundRect(2,2, 20, infoBarHeight, 3, color);
+    oled.setTextColor(WHITE);
+    oled.setCursor(baseX, infoBarHeight/2);
+    oled.print(text);
+}
+
+void drawCurrentTitleBar(void)
+{
+    drawTitleBar(menuStepEdit.title, menuStepEdit.titleColor);
 }
 
 void eraseInfoBar(void)
 {
-    oled.fillRoundRect(2,2,SCREEN_HEIGHT-4, infoBarHeight, 3, BLACK);
+    oled.fillRect(0,0, SCREEN_WIDTH, infoBarHeight + 3, BLACK);
 }
 
 void infoBarSetStatus(bool status)
@@ -297,10 +340,11 @@ void infoBarSetStatus(bool status)
 // check if info bar needs cleared
 void checkInfoBar(void)
 {
-    if (millis() - lastInfobarMillis > infoBarDispTime)
+    if (infoBarActive && (millis() - lastInfobarMillis > infoBarDispTime))
     {
         lastInfobarMillis = millis();
-        eraseInfoBar();
+        drawCurrentTitleBar();
+        infoBarSetStatus(false);
     }
 }
 
@@ -314,7 +358,32 @@ void checkInfoBar(void)
 uint32_t get_neopix_color_by_idx(int16_t colorsetIdx, int16_t colorShadeIdx)
 {
     uint32_t color = all_colors_neopix[colorsetIdx][colorShadeIdx];
-    return color;
+    return   color;
+}
+
+void FUNderline(uint8_t startX, uint8_t startY, uint8_t length, uint16_t color)
+{
+    const uint8_t height = 3;
+    const uint8_t spacing = 4;
+    uint8_t currentX = startX;
+    uint8_t endX = startX + abs(length);
+    uint8_t currentY = startY;
+
+    if (endX > SCREEN_WIDTH) endX = SCREEN_WIDTH;
+
+    while (currentX < endX)
+    {
+        uint8_t nextX;
+        uint8_t nextY;
+        
+        nextX = currentX + spacing;
+        (currentY <= startY) ? nextY = currentY + height : nextY = currentY - height;
+        if (nextX > endX) break;
+        oled.drawLine(currentX, currentY, nextX, nextY, YELLOW_5);
+        currentX = nextX;
+        currentY = nextY;
+        endX++;
+    } 
 }
 
 void z_showAllColors(void)
