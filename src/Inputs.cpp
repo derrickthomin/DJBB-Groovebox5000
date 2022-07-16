@@ -46,14 +46,15 @@ uint16_t sliderPotsNow[2]            = {0};
 int8_t   slidePotBigchangeCounter[2] = {0};     // Used to determine if user rapidly changed value for a bit. Usually used as a param reset trigger.
 uint16_t sliderPotsPrev[2]           = {0};
 bool     sliderPotsNewPress[2]       = {0};
-
-// Play button
-bool playButtoNow, playButtonState, playButtonQuickpress, playButtonDoublePress = false;
-bool playButtonPrev, playButtonStatePrev = false;
-elapsedMillis playButtonOntime = 0;
-uint32_t playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
 uint16_t joystickGuiLastX;
 uint16_t joystickGuiLastY;
+
+// Play button
+bool playButtoNow, playButtonState, playButtonQuickpress, 
+     playButtonDoublePress = false;
+bool playButtonPrev, playButtonStatePrev = false;
+elapsedMillis playButtonOntime = 0;
+uint32_t      playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
 
 /*
     ***************************** Input Checking **************************
@@ -66,10 +67,9 @@ uint16_t joystickGuiLastY;
 bool checkAllInputs(void)                // Check the state of sequencer + update step objects
 {
     bool haveAnyChanged = false;
-
     // Loop through all eight pins & update input arrays
-    for (uint8_t pin=0; pin<8; pin++)
-    {
+    for (uint8_t pin=0; pin<8; pin++){
+
         selectMuxPin(pin);    
         delayMicroseconds(5);
 
@@ -205,6 +205,7 @@ void processInputs(Sequencer& seq)
         //update_sliders(sliderAValMapped, sliderBValMapped);
         update_sliders_thin(sliderAVal(), sliderBVal());
         seq.setSwingAtIndex(i, sliderAValMapped);
+        update_slider_label(1, "rel");
       }
       if (sliderBChanged())
       {
@@ -215,26 +216,40 @@ void processInputs(Sequencer& seq)
         //update_sliders(sliderAValMapped, sliderBValMapped);
         update_sliders_thin(sliderAVal(), sliderBVal());
         seq.setStepDecayAtIndex(i, envelopeVal);
+        update_slider_label(2, " swing");
+      }
+
+      if (knob1Changed())
+      {
+        uint8_t potnum = 1;
+        update_pot_val(1, knob1Val());
+        update_pot_label(potnum, "atk");
       }
 
       if (knob2Changed())
       {
+        uint8_t potnum = 2;
         seq.setStepAttackAtIndex(i, knob2Val());
-        draw_pot_val_bottomscreen(2, knob2Val());
+        update_pot_val(2, knob2Val());
+        update_pot_label(potnum, "rel");
       }
 
       if (knob3Changed())
       {
+        uint8_t potnum = 3;
         uint16_t newFreq = map(knob3Val(), 0, 100, DRUM_MIN_FREQ, DRUM_MAX_FREQ);
         seq.setDrumFreqAtIndex(i, newFreq);
-        draw_pot_val_bottomscreen(3, knob3Val());
+        update_pot_val(potnum, knob3Val());
+        update_pot_label(potnum, "swng");
       }
 
       if (knob4Changed())
       {
+        uint8_t potnum = 4;
         float newpMod = map(knob4Val(), 0, 100, 0.3f, 0.7f);
         seq.setDrumPModAtIndex(i, newpMod);
-        draw_pot_val_bottomscreen(4, knob4Val());
+        update_pot_val(potnum, knob4Val());
+        update_pot_label(potnum, "ptch");
       }
     }
   }
@@ -271,19 +286,19 @@ void processInputs(Sequencer& seq)
   if (knob1Changed())                 
   {
     setHeadphoneVolume(knob1Val());                  // Knob 1 == volume by default
-    draw_pot_val_bottomscreen(1, knob1Val());
+    update_pot_val(1, knob1Val());
   }
   if (knob2Changed())                 
   {
-    draw_pot_val_bottomscreen(2, knob2Val());
+    update_pot_val(2, knob2Val());
   }
   if (knob3Changed())                 
   {
-    draw_pot_val_bottomscreen(3, knob3Val());
+    update_pot_val(3, knob3Val());
   }
   if (knob4Changed())                 
   {
-    draw_pot_val_bottomscreen(4, knob4Val());
+    update_pot_val(4, knob4Val());
   }
 
 

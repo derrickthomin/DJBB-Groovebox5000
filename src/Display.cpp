@@ -83,9 +83,18 @@ const uint8_t infobarY          = infoBarHeight - 1;
 const uint8_t infobarX          = 3;
 const uint8_t infoBarLineWidth  = SCREEN_WIDTH - infobarX * 2;
 
+// Menu Stuff
+const uint8_t mnu_title_left_pad = 5;
+const uint8_t mnu_title_colorblock_width = 15;
+
 // Pot Stuff
+const uint8_t pot_x_st       = 5;  // First pot position
 const uint8_t pot_line_width = (SCREEN_WIDTH / 6);
 const uint8_t pot_dot_radius = 3;
+const uint8_t pot_line_y     = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
+const uint8_t pot_val_y      = pot_line_y + pot_dot_radius + 5;
+const uint8_t pot_label_y    = 98;
+const uint8_t pot_label_ht   = 8;
   
 // Slider stuff
 const uint16_t sliderWidth = 13;    // in pixels - How wide the slider is
@@ -93,6 +102,10 @@ const uint16_t sliderHeight= 60;    // in pixels - How tall the slider is
 const uint8_t  sliderSpacing = 15;
 const uint8_t  sliderThinWidth = 3;
 const uint8_t  sliderThinHeight = 30;
+const uint8_t  slider_val_label_y = SCREEN_HEIGHT - sliderThinHeight - 10;
+const uint8_t  slider_label_x1    = 30;
+const uint8_t  slider_label_x2    = SCREEN_WIDTH/2;
+const uint8_t  slider_labelbar_width = (SCREEN_WIDTH - (2*slider_label_x1))/2;
 
 // Draw slider A outline
 const uint16_t sliderA_x = screen_middle - sliderWidth - (sliderSpacing/2);    
@@ -144,7 +157,13 @@ void initOled(void)
     oled.begin(16000000);
     oled.fillScreen(BLACK);
     oled.setRotation(2);
+    drawCurrentTitleBar();
     //z_drawMascotBitmap();
+}
+
+void drawCurrentTitleBar(void)
+{
+    screens[currentScreenIDX].drawTitleBarMnu();
 }
 
 void draw_sliders(int8_t valA, int8_t valB)
@@ -199,25 +218,25 @@ void update_sliders_thin(int8_t valA, int8_t valB)
     // clear prev
     oled.fillRect(0, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
     oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
-    oled.fillRect(0, SCREEN_HEIGHT - sliderThinHeight - 10, 20, 10, BLACK);
-    oled.fillRect(SCREEN_WIDTH - 18, SCREEN_HEIGHT - sliderThinHeight - 10, 20, 10, BLACK);
+    oled.fillRect(0, slider_val_label_y, 20, 10, BLACK);
+    oled.fillRect(SCREEN_WIDTH - 18, slider_val_label_y, 20, 10, BLACK);
     //oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
 
     // Draw the rectangles
     uint8_t valAMapped = map(valA ,0,100,0,sliderThinHeight);
     uint8_t valBMapped = map(valB ,0,100,0,sliderThinHeight);
 
-    oled.fillRect(0, SCREEN_HEIGHT - valAMapped, sliderThinWidth, valAMapped, BLUE_2);
-    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - valBMapped, sliderThinWidth, valBMapped, GREEN_2);
+    oled.fillRect(0, SCREEN_HEIGHT - valAMapped, sliderThinWidth, valAMapped, GREEN_2);
+    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - valBMapped, sliderThinWidth, valBMapped, BLUE_2);
 
     //Draw the numbers
     oled.setTextSize(1);
-    oled.setTextColor(BLUE_5);
-    oled.setCursor(0, SCREEN_HEIGHT - sliderThinHeight - 10);
+    oled.setTextColor(GREEN_5);
+    oled.setCursor(0, slider_val_label_y);
     oled.println(valA);
 
-    oled.setTextColor(GREEN_5);
-    oled.setCursor(SCREEN_WIDTH - 18, SCREEN_HEIGHT - sliderThinHeight - 10);
+    oled.setTextColor(BLUE_5);
+    oled.setCursor(SCREEN_WIDTH - 18, slider_val_label_y);
     oled.println(valB);
 }
 
@@ -281,54 +300,103 @@ void update_sliders(int8_t valA, int8_t valB)
 
 // Draws values of the underscreen pots on the bottom portion of the screen
 //      Pot number = 1 - 4
-void draw_pot_val_bottomscreen(uint8_t potNumber, uint8_t potVal)
+void update_pot_val(uint8_t potNumber, uint8_t potVal)
 {
     if (potNumber < 1) potNumber = 1;
     if (potNumber > 4) potNumber = 4;
 
-    clear_pot_bottom_screen(potNumber); 
+    clear_pot_val(potNumber); 
     uint32_t pot_color = yellows[potNumber];
 
     // Set coordinates for pot 1
-    uint8_t x    = screen_qtr_2_x/2 -  (pot_line_width/2);
+    uint8_t x    = pot_x_st;
     uint8_t y    = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
     uint8_t xDot = map(potVal, 0, 100, 0, pot_line_width);
 
     // Now modify x for pots that are not 1
-    if (potNumber > 1)
-    {   
+    if (potNumber > 1){
         potNumber = potNumber -1;
         x = x + (screen_qtr_2_x * potNumber);
     }
-
     oled.drawFastHLine(x, y, pot_line_width, pot_color);
     oled.fillCircle(x + xDot,y,pot_dot_radius, pot_color);
-    oled.setCursor(x, y + pot_dot_radius + 5);
+    oled.setCursor(x, pot_val_y);
     oled.setTextColor(pot_color);
     oled.print(potVal);
-    //oled.updateScreen();
+}
+
+void update_pot_label(uint8_t potNumber, char* label)
+{
+    if (potNumber < 1) potNumber = 1;
+    if (potNumber > 4) potNumber = 4;
+    clear_pot_label(potNumber); 
+
+    uint32_t color = yellows[potNumber];
+    uint8_t  x     = pot_x_st - pot_dot_radius + 2;
+    if (potNumber > 1){
+        potNumber = potNumber -1;
+        x = x + (screen_qtr_2_x * potNumber);
+    }
+    oled.setCursor(x, pot_label_y);
+    oled.setTextColor(color);
+    oled.println(label);
+}
+
+void clear_pot_label(uint8_t potNumber)
+{
+    uint8_t x = pot_x_st - pot_dot_radius + 2;
+    if (potNumber > 1){
+        potNumber = potNumber -1;
+        x = x + (screen_qtr_2_x * potNumber);
+    }
+    oled.fillRect(x, pot_label_y, pot_line_width + pot_dot_radius + 1, pot_label_ht, BLACK);
 }
 
 // Erase existing pot drawing
-void clear_pot_bottom_screen(uint8_t potNumber)
+void clear_pot_val(uint8_t potNumber)
 {
     if (potNumber < 1) potNumber = 1;
     if (potNumber > 4) potNumber = 4;
 
     // Set coordinates for pot 1
-    uint8_t x = 0;
-    uint8_t y = screen_bot_info_y;
-    uint8_t width = screen_qtr_2_x;
-    uint8_t height = SCREEN_HEIGHT - screen_bot_info_y;
+    uint8_t x = pot_x_st - (pot_dot_radius);
+    uint8_t y = pot_line_y - pot_dot_radius - 1;
+    uint8_t width = pot_line_width + (pot_dot_radius * 2) + 1;
+    uint8_t height = SCREEN_HEIGHT - y;
 
     // Now modify x for pots that are not 1
-    if (potNumber > 1)
-    {   
+    if (potNumber > 1){   
         potNumber = potNumber -1;
         x = x + (screen_qtr_2_x * potNumber);
     }
-
     oled.fillRect(x, y, width, height, BLACK);
+   //oled.drawRect(x, y, width, height, PURPLE_4);
+}
+
+void update_slider_label(uint8_t sliderNumber, char* label)
+{
+    clear_slider_label(sliderNumber);
+
+    if (sliderNumber == 1){
+        oled.setCursor(slider_label_x1, slider_val_label_y);
+        oled.setTextColor(GREEN_5);
+        oled.print(label);
+    }
+
+    if (sliderNumber == 2){
+        oled.setCursor(slider_label_x2, slider_val_label_y);
+        oled.setTextColor(BLUE_5);
+        oled.print(label);
+    }
+}
+
+void clear_slider_label(uint8_t sliderNumber)
+{
+    uint8_t x;
+    if (sliderNumber ==1) x = slider_label_x1;
+    if (sliderNumber ==2) x = SCREEN_WIDTH/2;
+
+    oled.fillRect(x, slider_val_label_y, slider_labelbar_width, 10, BLACK);
 }
 
 void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size = 1, int color)
@@ -360,19 +428,19 @@ void drawInfoBar(char * text, int16_t displayVal = -1)
 
 void drawTitleBar(char * text, uint16_t color)
 {
-    uint8_t baseX = 7;
+    uint8_t x = mnu_title_colorblock_width + mnu_title_left_pad;
     eraseInfoBar();
     oled.drawRoundRect(2,2,SCREEN_WIDTH-4, infoBarHeight, 3, color);
-    oled.fillRoundRect(2,2, 20, infoBarHeight, 3, color);
+    oled.fillRoundRect(2,2, mnu_title_colorblock_width, infoBarHeight, 3, color);
     oled.setTextColor(WHITE);
-    oled.setCursor(baseX, infoBarHeight/2);
+    oled.setCursor(x, infoBarHeight/2);
     oled.print(text);
 }
 
-void drawCurrentTitleBar(void)
-{
-    drawTitleBar(screens[currentScreenIDX].title, screens[currentScreenIDX].titleColor);
-}
+// void drawCurrentTitleBar(void)
+// {
+//     drawTitleBar(screens[currentScreenIDX].title, screens[currentScreenIDX].titleColor);
+// }
 
 void eraseInfoBar(void)
 {

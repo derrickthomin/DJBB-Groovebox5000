@@ -33,7 +33,7 @@ class Screen
 void initOled(void);    
 void initScreens(void);                                                          // Sets up OLED
 void drawInfoBar(char * text, int16_t displayVal = -1);
-void drawTitleBar(char * text, int16_t color);
+void drawTitleBar(char * text, uint16_t color);
 void drawCurrentTitleBar(uint8_t menu_idx);
 void infoBarSetStatus(bool status);
 void eraseInfoBar(void);
@@ -41,10 +41,14 @@ void checkInfoBar(void);
 void draw_sliders(int8_t valA, int8_t valB);                                      // Draw sliders on the screen
 void update_sliders(int8_t valA, int8_t valB);
 void update_sliders_thin(int8_t valA, int8_t valB);
-void draw_pot_val_bottomscreen(uint8_t potNumber, uint8_t potVal);                // Draw pot values on bottom of the screen
-void clear_pot_bottom_screen(uint8_t potNumber);                                  // Erase pot values on bottom of screen.
+void update_slider_label(uint8_t sliderNumber, char* label);
+void clear_slider_label(uint8_t sliderNumber);
+void update_pot_val(uint8_t potNumber, uint8_t potVal);                // Draw pot values on bottom of the screen
+void clear_pot_val(uint8_t potNumber);                                  // Erase pot values on bottom of screen.
+void clear_pot_label(uint8_t potNumber);
+void update_pot_label(uint8_t potNumber, char* label);
 void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size = 1, int color = RED_2); // Draw note symbol at a certain location.
-void drawCurrentTitleBar();
+void drawCurrentTitleBar(void);                                                   // Draws title bar based on current screen idx
 
 /*
 ***************** Helper / Testing Functions *******************
