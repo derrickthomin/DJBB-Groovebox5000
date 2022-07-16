@@ -26,18 +26,31 @@ class Step {
         Voice* voice;                  // Store pointer to a voice object
         uint32_t color;
         uint8_t colorSetIDXstp;
-        
+
+        // Drum voice settings
+        uint16_t drumFreq;                 // Drum voice frequency 
+        uint16_t drumLength;               // How long is the hit
+        float    drumPMod;                 // Pitch mod
+        float    drum2ndHitMix;            // Level of 2nd hit
+
+        // FX n Filters
+        uint8_t  bitcrushDepth;        // Bitcrush dept 1-16
+        uint16_t bitcrushSampRate;        // Up to 44.1k
+        uint16_t filterFreq;              // 0 - 20k
+        float    filterQ;                 // 0.7 - 5. Above 0.707 will add gain.
+    
     public:
         Step(uint8_t colorSetIDX);
 
         void playNote(void);          // Play note from the current voice
+        void assignVoice(Voice* vOice){voice = vOice;}
 
         // -------- Getters --------//
         uint16_t getStepAttack(void);
         bool     getStepState(void) {return state;}
         int32_t  getSwingMicros(void) {return swingMcros;}
         bool     getPlayingState(void){return played;}
-        uint32_t  getColor(void){return color;}
+        uint32_t getColor(void){return color;}
         uint8_t  getVoiceNumber(void){return voice -> getID();}
         uint16_t getVoiceAttack(void){return voice -> getAttack();}
 
@@ -55,7 +68,18 @@ class Step {
         void setVolume(uint16_t vol){volume = vol;}
         void setPlayingState(bool playstate){played = playstate;} 
         void setColor(uint32_t colour){color = colour;}
-        void assignVoice(Voice* vOice){voice = vOice;}
+        
+        // drum voice
+        void setDrumPMod(float pmod)     {drumPMod = pmod;}
+        void setDrumLength(uint16_t len) {drumLength = len;}
+        void setDrumMix2(float mix2)     {drum2ndHitMix = mix2;}
+        void setDrumFreq(uint16_t freq)  {drumFreq = freq;}
+
+        // fx n filter
+        void setBitCrushDepth(uint8_t depth) {bitcrushDepth = depth;}
+        void setBitCrushRate(uint16_t freq)  {bitcrushSampRate = freq;}
+        void setFiltFreq(uint16_t freq)      {filterFreq = freq;}
+        void setFilterQ(float q)             {filterQ = q;}
 };
 
 // Class for our sequencer. Track bpm, num steps, etc.
@@ -129,8 +153,8 @@ class Sequencer {
         void setNextStepPlayedState(bool state){steps[getNextStepNumber()].setPlayingState(state);}
         
         // -------> Index Funcions
-        void stepOnAtIndex(uint8_t idx);
-        void stepOffAtIndex(uint8_t idx);
+        void stepOnAtIDX(uint8_t idx);
+        void stepOffAtIDX(uint8_t idx);
         void stepFlipStateAtIndex(uint8_t idx);
         void setSwingAtIndex(uint8_t idx, int8_t swing);          // Pass a positive or negative value, from - 50 to 50
         void setPlayStateAtIndex(uint8_t idx, bool playstate);
@@ -142,8 +166,20 @@ class Sequencer {
         void setStepSwingMillisAtIndex(uint8_t idx, int16_t swingMillis);           // Number of millis to add or subtract for step... for swing
         void setStepRatchetCountAtIndex(uint8_t idx, uint8_t count);
         void setStepColorAtIndex(uint8_t idx, uint16_t color);
+        
+        // djt - flesh me out
 
-
+        // Bitcrush
+        void setStepBitcrushDepthAtIndex(uint8_t idx, uint8_t depth);
+        void setStepBitcurshRateAtIndex(uint8_t idx, uint16_t freq);
+        // Filter
+        void setStepFiltFreqAtIndex(uint8_t idx, uint16_t freq);
+        void setStepFilterQAtIndex(uint8_t idx, float q);
+        // Drum stuff
+        void setDrumPModAtIndex(uint8_t idx, float pmod);
+        void setDrumLengthAtIndex(uint8_t idx, uint16_t len);
+        void setDrumMix2AtIndex(uint8_t idx, float mix2);
+        void setDrumFreqAtIndex(uint8_t idx, uint16_t freq);
 
         // --------- Other --------- //
         void debugPrintSeqData(String message, bool extraSpace = false, bool detailed = true);

@@ -20,6 +20,17 @@ Step::Step(uint8_t colorSetIDX)
     assignedVoice = 1;         // Track which voice to use when this hits. z
     colorSetIDXstp = colorSetIDX;
     color = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
+    // FX n Filters
+    bitcrushDepth =    DEFAULT_CRUSH_BITDEPTH;        // Bitcrush dept 1-16
+    bitcrushSampRate = DEFAULT_CRUSH_FREQ;            // Up to 44.1k
+    filterFreq =       DEFAULT_FILT_FREQ;             // 0 - 20k
+    filterQ =          DEFAULT_FILT_Q;                // 0.7 - 5. Above 0.707 will add gain.
+    // Drum
+    drumFreq = DEFAULT_DRUM_FREQ;                     // Drum voice frequency 
+    drumLength = DEFAULT_DRUM_LENGTH;                 // How long is the hit
+    drumPMod = DEFAULT_DRUM_PMOD;                     // Pitch mod
+    drum2ndHitMix = DEFAULT_DRUM_MIX2;                // Level of 2nd hit
+
 }
 Sequencer::Sequencer(uint8_t a, uint8_t b)
 {
@@ -91,29 +102,10 @@ uint8_t Sequencer::getNextStepNumber(void)
 
 ********************************************************************************** 
 */
-void Step::setAttack(uint16_t envAttack)
-{
-    attack = envAttack;
-    //voice->setAttack(envAttack);
-}
-
-void Step::setRelease(uint16_t envRelease)
-{
-    release = envRelease;
-    //voice->setRelease(release);
-}
-
-void Step::setDecay(uint16_t envDecay)
-{
-    decay = envDecay;
-    //voice->setDecay(decay);
-}
-
-void Step::setSustain(uint16_t envSustain)
-{
-    sustain = envSustain;
-    //voice->setSustain(sustain);
-}
+void Step::setAttack(uint16_t envAttack) {attack = envAttack;}
+void Step::setRelease(uint16_t envRelease){release = envRelease;}
+void Step::setDecay(uint16_t envDecay){decay = envDecay;}
+void Step::setSustain(uint16_t envSustain){sustain = envSustain;}
 
 void Step::playNote(void)
 {
@@ -125,8 +117,10 @@ void Step::playNote(void)
     AudioNoInterrupts();
     voice->setAttack(attack);
     voice->setDecay(decay);
-    voice->setRelease(sustain);
+    voice->setSustain(sustain);
     voice->setRelease(release);
+    voice->setDrumFreq(drumFreq);
+    voice->setDrumPMod(drumPMod);
     AudioInterrupts();
 
     voice->play();
@@ -141,8 +135,9 @@ void Sequencer::flipPlayState(void)
 void Sequencer::resetCounter(void){seqElapsedMicros = 0;}
 void Sequencer::setStepNumber(uint8_t step) {currentStep = step;}
 
-void Sequencer::stepOnAtIndex(uint8_t idx){steps[idx].stepOn();}
-void Sequencer::stepOffAtIndex(uint8_t idx){steps[idx].stepOff();}
+// ----- ------- ------ INDEX FUNCTIONS ------ -------- --------
+void Sequencer::stepOnAtIDX(uint8_t idx){steps[idx].stepOn();}
+void Sequencer::stepOffAtIDX(uint8_t idx){steps[idx].stepOff();}
 void Sequencer::stepFlipStateAtIndex(uint8_t idx){steps[idx].flipState();}
 
 void Sequencer::setStepAttackAtIndex(uint8_t idx, uint16_t attack){steps[idx].setAttack(attack);}
@@ -156,6 +151,16 @@ void Sequencer::setStepRatchetCountAtIndex(uint8_t idx, uint8_t count){steps[idx
 void Sequencer::setPlayStateAtIndex(uint8_t idx, bool playstate){steps[idx].setPlayingState(playstate);}
 void Sequencer::setStepColorAtIndex(uint8_t idx, uint16_t color){steps[idx].setColor(color);}
 void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
+
+void Sequencer::setStepBitcrushDepthAtIndex(uint8_t idx, uint8_t depth){steps[idx].setBitCrushDepth(depth);} 
+void Sequencer::setStepBitcurshRateAtIndex(uint8_t idx, uint16_t freq){steps[idx].setBitCrushRate(freq);} 
+void Sequencer::setStepFiltFreqAtIndex(uint8_t idx, uint16_t freq){steps[idx].setFiltFreq(freq);} 
+void Sequencer::setStepFilterQAtIndex(uint8_t idx, float q){steps[idx].setFilterQ(q);} 
+void Sequencer::setDrumPModAtIndex(uint8_t idx, float pmod){steps[idx].setDrumPMod(pmod);} 
+void Sequencer::setDrumLengthAtIndex(uint8_t idx, uint16_t len){steps[idx].setDrumLength(len);} 
+void Sequencer::setDrumMix2AtIndex(uint8_t idx, float mix2){steps[idx].setDrumMix2(mix2);} 
+void Sequencer::setDrumFreqAtIndex(uint8_t idx, uint16_t freq){steps[idx].setDrumFreq(freq);} 
+
 
 void Sequencer::reset(void)
 {

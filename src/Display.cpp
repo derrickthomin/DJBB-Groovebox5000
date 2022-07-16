@@ -27,7 +27,7 @@ char * prevInfoText;
 int16_t prevInfoVal;
 uint32_t lastInfobarMillis = millis();          // when did we last show a new info bar
 const uint16_t infoBarDispTime = 700;           // How many millis until the banner goes awasy
-
+int16_t currentScreenIDX = 0;
 /*
 ***************************   Menus   **********************************
 
@@ -43,19 +43,28 @@ const uint16_t infoBarDispTime = 700;           // How many millis until the ban
     Default menu (for now... ). This menu is where you can hold buttons to 
     change p-lock params, etc.
 */
+// class Screen
+// {
+//     char*    title;
+//     uint16_t titleColor;
+//     uint8_t  actionAreaWidth;
+//     uint8_t  actionAreaHeight;
 
-struct
+// };
+//std::vector<Screen> screens;
+
+Screen::Screen(char* Title, uint16_t TitleColor)
 {
-    char* title   = "     Step Edit";
-    uint16_t titleColor = YELLOW_5;
+    title = Title;
+    titleColor = TitleColor;
+}
 
-    // functions
-    void drawTitleBarMnu(void)                    // Draws the top title bar
-    {
-        drawTitleBar(title, titleColor);
-    }
-} menuStepEdit;
-
+// functions
+void Screen::drawTitleBarMnu(void)                    // Draws the top title bar
+{
+    drawTitleBar(title, titleColor);
+}
+std::vector<Screen> screens;
 
 /*
 *************************** Helper variables **************************
@@ -64,22 +73,26 @@ struct
 
 ************************************************************************
 */
-
 const uint8_t screen_middle = SCREEN_HEIGHT/2; 
 const uint8_t screen_qtr_2_x = SCREEN_HEIGHT/4;
 const uint8_t screen_qtr_3_x = screen_qtr_2_x * 2;
 const uint8_t screen_qtr_4_x = screen_qtr_2_x * 3;
-const uint8_t screen_bot_info_y = 80;                 // Below here we can show pot values, etc.
-const uint8_t screen_pot_radius = 8;
+const uint8_t screen_bot_info_y = 95;                 // Below here we can show pot values, etc.
 const uint8_t infoBarHeight     = 17;
 const uint8_t infobarY          = infoBarHeight - 1;
 const uint8_t infobarX          = 3;
 const uint8_t infoBarLineWidth  = SCREEN_WIDTH - infobarX * 2;
+
+// Pot Stuff
+const uint8_t pot_line_width = (SCREEN_WIDTH / 6);
+const uint8_t pot_dot_radius = 3;
   
 // Slider stuff
 const uint16_t sliderWidth = 13;    // in pixels - How wide the slider is
 const uint16_t sliderHeight= 60;    // in pixels - How tall the slider is
 const uint8_t  sliderSpacing = 15;
+const uint8_t  sliderThinWidth = 3;
+const uint8_t  sliderThinHeight = 30;
 
 // Draw slider A outline
 const uint16_t sliderA_x = screen_middle - sliderWidth - (sliderSpacing/2);    
@@ -117,16 +130,21 @@ uint8_t pointerLineB_y2_prev;
 ****************************************************************
 */
 
+// Create new screens here.
+void initScreens(void)
+{
+    screens.push_back(Screen("Step Edit", ORANGE_5));
+    screens.push_back(Screen("Screen 2", YELLOW_5));
+    screens.push_back(Screen("Screen 3", PURPLE_5));
+}
+
 void initOled(void)
 {
     //oled.begin();
     oled.begin(16000000);
     oled.fillScreen(BLACK);
     oled.setRotation(2);
-    // z_showAllColors();
-    // oled.drawCircle(50,50,10,BLUE_3);
-    //oled.updateScreen();
-    // djt add a cool splasher
+    //z_drawMascotBitmap();
 }
 
 void draw_sliders(int8_t valA, int8_t valB)
@@ -173,6 +191,33 @@ void draw_sliders(int8_t valA, int8_t valB)
 
     oled.setTextColor(GREEN_5);
     oled.setCursor(pointerLineB_x2 + 15, pointerLineB_y2);
+    oled.println(valB);
+}
+
+void update_sliders_thin(int8_t valA, int8_t valB)
+{
+    // clear prev
+    oled.fillRect(0, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
+    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
+    oled.fillRect(0, SCREEN_HEIGHT - sliderThinHeight - 10, 20, 10, BLACK);
+    oled.fillRect(SCREEN_WIDTH - 18, SCREEN_HEIGHT - sliderThinHeight - 10, 20, 10, BLACK);
+    //oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
+
+    // Draw the rectangles
+    uint8_t valAMapped = map(valA ,0,100,0,sliderThinHeight);
+    uint8_t valBMapped = map(valB ,0,100,0,sliderThinHeight);
+
+    oled.fillRect(0, SCREEN_HEIGHT - valAMapped, sliderThinWidth, valAMapped, BLUE_2);
+    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - valBMapped, sliderThinWidth, valBMapped, GREEN_2);
+
+    //Draw the numbers
+    oled.setTextSize(1);
+    oled.setTextColor(BLUE_5);
+    oled.setCursor(0, SCREEN_HEIGHT - sliderThinHeight - 10);
+    oled.println(valA);
+
+    oled.setTextColor(GREEN_5);
+    oled.setCursor(SCREEN_WIDTH - 18, SCREEN_HEIGHT - sliderThinHeight - 10);
     oled.println(valB);
 }
 
@@ -245,8 +290,9 @@ void draw_pot_val_bottomscreen(uint8_t potNumber, uint8_t potVal)
     uint32_t pot_color = yellows[potNumber];
 
     // Set coordinates for pot 1
-    uint8_t x = screen_qtr_2_x/2;
-    uint8_t y = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
+    uint8_t x    = screen_qtr_2_x/2 -  (pot_line_width/2);
+    uint8_t y    = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
+    uint8_t xDot = map(potVal, 0, 100, 0, pot_line_width);
 
     // Now modify x for pots that are not 1
     if (potNumber > 1)
@@ -255,8 +301,9 @@ void draw_pot_val_bottomscreen(uint8_t potNumber, uint8_t potVal)
         x = x + (screen_qtr_2_x * potNumber);
     }
 
-    oled.drawCircle(x, y, screen_pot_radius, pot_color);
-    oled.setCursor(x - 5, y + screen_pot_radius + 2);
+    oled.drawFastHLine(x, y, pot_line_width, pot_color);
+    oled.fillCircle(x + xDot,y,pot_dot_radius, pot_color);
+    oled.setCursor(x, y + pot_dot_radius + 5);
     oled.setTextColor(pot_color);
     oled.print(potVal);
     //oled.updateScreen();
@@ -324,7 +371,7 @@ void drawTitleBar(char * text, uint16_t color)
 
 void drawCurrentTitleBar(void)
 {
-    drawTitleBar(menuStepEdit.title, menuStepEdit.titleColor);
+    drawTitleBar(screens[currentScreenIDX].title, screens[currentScreenIDX].titleColor);
 }
 
 void eraseInfoBar(void)
@@ -448,5 +495,22 @@ void  z_funNoteAnimation(uint8_t xtraX = 0, uint8_t xtraY = 0, uint8_t size = 1)
         if (colorAryIDX > colors.size()-1) colorAryIDX = 0;
         delay(200);
 }
+}
+
+void z_drawMascotBitmap(void)
+{
+    uint8_t x = 0;
+    uint8_t y =0;
+    while (x < SCREEN_WIDTH - 30)
+    {
+        y = 0;
+        while (y < SCREEN_HEIGHT - 30)
+        {
+            oled.drawRGBBitmap(x,y,mascot_30px,30,30);
+            y += 30;
+            delay(50);
+        }
+        x += 30;
+    }
 }
 

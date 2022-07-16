@@ -107,12 +107,17 @@ bool checkAllInputs(void)                // Check the state of sequencer + updat
               knobAndJoystickNewPress[pin] = true;
             } else {
               knobAndJoystickNewPress[pin] = false;
-              knobAndJoystickNow[pin] = knobAndJoystickPrev[pin];
             }
             break;
 
           default: // Everyting else on mux2 (knobs & joystick x + y)
-            (abs(knobAndJoystickNow[pin] - knobAndJoystickPrev[pin]) > analogChangeThres) ? knobAndJoystickNewPress[pin] = true : knobAndJoystickNewPress[pin] = false;
+            if (abs(knobAndJoystickNow[pin] - knobAndJoystickPrev[pin]) > analogChangeThres)
+            {
+              knobAndJoystickNewPress[pin] = true;
+             } else {
+              knobAndJoystickNewPress[pin] = false;
+              knobAndJoystickNow[pin] = knobAndJoystickPrev[pin];
+             }
             break;
         }
 
@@ -197,7 +202,8 @@ void processInputs(Sequencer& seq)
       {
         int8_t sliderAValMapped = map(sliderAVal(), 0, 100, -50, 50);
         int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
-        update_sliders(sliderAValMapped, sliderBValMapped);
+        //update_sliders(sliderAValMapped, sliderBValMapped);
+        update_sliders_thin(sliderAVal(), sliderBVal());
         seq.setSwingAtIndex(i, sliderAValMapped);
       }
       if (sliderBChanged())
@@ -206,13 +212,29 @@ void processInputs(Sequencer& seq)
         int8_t sliderAValMapped = map(sliderAVal(), 0, 100, -50, 50);
         int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
         uint16_t  envelopeVal = ((sliderBVal()+1) * 10);
-        update_sliders(sliderAValMapped, sliderBValMapped);
+        //update_sliders(sliderAValMapped, sliderBValMapped);
+        update_sliders_thin(sliderAVal(), sliderBVal());
         seq.setStepDecayAtIndex(i, envelopeVal);
       }
 
       if (knob2Changed())
       {
         seq.setStepAttackAtIndex(i, knob2Val());
+        draw_pot_val_bottomscreen(2, knob2Val());
+      }
+
+      if (knob3Changed())
+      {
+        uint16_t newFreq = map(knob3Val(), 0, 100, DRUM_MIN_FREQ, DRUM_MAX_FREQ);
+        seq.setDrumFreqAtIndex(i, newFreq);
+        draw_pot_val_bottomscreen(3, knob3Val());
+      }
+
+      if (knob4Changed())
+      {
+        float newpMod = map(knob4Val(), 0, 100, 0.3f, 0.7f);
+        seq.setDrumPModAtIndex(i, newpMod);
+        draw_pot_val_bottomscreen(4, knob4Val());
       }
     }
   }

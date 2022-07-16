@@ -44,6 +44,7 @@ void setup()
   Voice::assignDefaultVoicesForSequencer(&sequencer_1);
   inputSetup();
   initOled();
+  initScreens();
   strip.begin();
   strip.setBrightness(NEOPIX_BRIGHTNESS);
   Serial.println(Voice::allVoices[0]->getAttack());
