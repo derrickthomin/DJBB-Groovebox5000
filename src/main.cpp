@@ -112,3 +112,13 @@ void loop()
   // }
   
 }
+
+/*
+    ***************************** Guide / Reference **************************
+
+            Adding new functions based on inputs.
+            1. For global - Create a function that takes a uint8t
+            2. For step specific - ...
+
+    ************************************************************************
+*/

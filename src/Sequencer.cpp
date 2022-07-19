@@ -32,6 +32,9 @@ Step::Step(uint8_t colorSetIDX)
     drum2ndHitMix = DEFAULT_DRUM_MIX2;                // Level of 2nd hit
 
 }
+std::vector<Sequencer*> Sequencer::allSequencers = {};
+int8_t Sequencer::curSequencerIDX = 0;
+uint8_t Sequencer::numSequencers = 0;  
 Sequencer::Sequencer(uint8_t a, uint8_t b)
 {
     colorSetIDX = 6;
@@ -46,7 +49,11 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
     microsecondsPerStep = 60 * 1000 * 1000 / (bpm * 4);    // 4 = 16th notes. 1 = 1/4 notes. Etc.
     maxSwingMicros = (microsecondsPerStep / 2) - 400;     // Set max swing to a little less than half of a step 
     microsecondsNextStep = microsecondsPerStep;            // Track this separately... may need to apply swing and play a note early or late.    
-    microsecondsNextNote = microsecondsPerStep;              
+    microsecondsNextNote = microsecondsPerStep;        
+
+    allSequencers.push_back(this);
+    curSequencerIDX = 0;
+    numSequencers++;      
 }
 
 /*
@@ -94,10 +101,32 @@ uint8_t Sequencer::   getNextStepNumber(void)
 
 ********************************************************************************** 
 */
-void Step::setAttack(uint16_t envAttack)   {attack = envAttack;}
-void Step::setRelease(uint16_t envRelease) {release = envRelease;}
-void Step::setDecay(uint16_t envDecay)     {decay = envDecay;}
-void Step::setSustain(uint16_t envSustain) {sustain = envSustain;}
+
+// ----- ------- ------ STEP Functions ------ -------- --------
+// These take in a value of 0 - 100, and convert it to whatever.
+
+void Step::setAttack (uint8_t val)      {attack =  map(val, 0, 100, MIN_ATTACK, MAX_ATTACK);}
+void Step::setRelease(uint8_t val)      {release = map(val, 0, 100, MIN_RELEASE, MAX_RELEASE);}
+void Step::setDecay  (uint8_t val)      {decay =   map(val, 0, 100, MIN_DECAY, MAX_DECAY);}
+void Step::setSustain(uint8_t val)      {sustain = map(val, 0, 100, MIN_SUSTAIN, MAX_SUSTAIN);}
+void Step::setRatchetCount(uint8_t val) {ratchetCount = map(val, 0, 100, MIN_RATCHET, MAX_RATCHET);}
+void Step::setVolume(uint8_t val)       {volume = map(val,0,100,MIN_VOICE_VOL,MAX_VOICE_VOL);}
+// drum voice
+void Step::setDrumPMod(uint8_t val)      {drumPMod = map(val, 0, 100, MIN_DRUM_PMOD, MAX_DRUM_PMOD);}
+void Step::setDrumLength(uint8_t val)    {drumLength = map(val, 0,100, MIN_DRUM_LEN, MAX_DRUM_LEN);}
+void Step::setDrumMix2(uint8_t val)      {drum2ndHitMix = map(val, 0, 100, MIN_DRUM_MIX2, MAX_DRUM_MIX2);}
+void Step::setDrumFreq(uint8_t val)      {drumFreq = map(val, 0, 100, MIN_DRUM_FREQUENCY, MAX_DRUM_FREQUENCY);}
+// fx n filter 
+void Step::setBitCrushDepth (uint8_t val) {bitcrushDepth = map(val, 0, 100, MIN_CRUSH_BITDEPTH, MAX_CRUSH_BITDEPTH);}
+void Step::setBitCrushRate  (uint8_t val) {bitcrushSampRate = map(val, 0, 100, MIN_CRUSH_FREQ, MAX_CRUSH_FREQ);}
+void Step::setFiltFreq      (uint8_t val) {filterFreq = map(val, 0, 100, MIN_FILTER_FREQ, MAX_FILTER_FREQ);}
+void Step::setFilterQ       (uint8_t val) {filterQ = map(val, 0, 100, MIN_FILTER_Q, MAX_FILTER_Q);}
+// 
+void Step::setSwingMicros(int32_t swingMicr)     {swingMcros = swingMicr;}
+void Step::setPlayingState(bool playstate)       {played = playstate;} 
+
+
+
 
 void Sequencer::setStepNumber(uint8_t step) {currentStep = step;}
 void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
@@ -119,8 +148,7 @@ void Sequencer::setStepAttackAtIndex(uint8_t idx, uint16_t attack){steps[idx].se
 void Sequencer::setStepReleaseAtIndex(uint8_t idx, uint16_t release){steps[idx].setRelease(release);}
 void Sequencer::setStepDecayAtIndex(uint8_t idx, uint16_t decay){steps[idx].setDecay(decay);}
 void Sequencer::setStepSustainAtIndex(uint8_t idx, uint16_t sustain){steps[idx].setSustain(sustain);}
-void Sequencer::setStepVolumeAtIndex(uint8_t idx, uint16_t vol){steps[idx].setVolume(vol);}
-void Sequencer::setStepSwingMillisAtIndex(uint8_t idx, int16_t swingMillis){steps[idx].setSwingMillis(swingMillis);}    
+void Sequencer::setStepVolumeAtIndex(uint8_t idx, uint16_t vol){steps[idx].setVolume(vol);} 
 void Sequencer::setStepRatchetCountAtIndex(uint8_t idx, uint8_t count){steps[idx].setRatchetCount(count);}
 void Sequencer::setPlayStateAtIndex(uint8_t idx, bool playstate){steps[idx].setPlayingState(playstate);}
 void Sequencer::setStepColorAtIndex(uint8_t idx, uint16_t color){steps[idx].setColor(color);}
@@ -134,9 +162,7 @@ void Sequencer::setDrumMix2AtIndex(uint8_t idx, float mix2){steps[idx].setDrumMi
 void Sequencer::setDrumFreqAtIndex(uint8_t idx, uint16_t freq){steps[idx].setDrumFreq(freq);} 
 void Sequencer::setSwingAtIndex(uint8_t idx, int8_t swing) 
 {
-    if (swing < -50) swing = -50;
-    if (swing > 50) swing = 50;
-    steps[idx].setSwingMicros(map(swing, -50, 50, -maxSwingMicros, maxSwingMicros));
+    steps[idx].setSwingMicros(map(swing, 0, 100, -maxSwingMicros, maxSwingMicros));
 }
 
 /*
@@ -261,7 +287,34 @@ void Sequencer::resetSwing(void)
         setSwingAtIndex(i, 0);
     }
 }
- 
+ //**************     Globaslish
+// DJT experimnetal...
+ void setCurrSeqSwingAtIndex(uint8_t step_idx, uint8_t pot_idx)
+ {
+    int8_t swingval;
+    switch(pot_idx){
+        case 0:
+            swingval = knob1Val();
+            break;
+        case 1:
+            swingval = knob2Val();
+            break;
+        case 2:
+            swingval = knob3Val();
+            break;
+        case 3:
+            swingval = knob4Val();
+            break;
+        case 4:
+            swingval = sliderAVal();
+            break;
+        case 5:
+            swingval = sliderBVal();
+            break;
+    }
+    swingval = map(swingval, 0, 100, -50, 50);
+    Sequencer::allSequencers[Sequencer::curSequencerIDX]->setSwingAtIndex(step_idx, swingval);
+ }
 /*
 **********************************     DEBUG     *********************************
                 

@@ -1,8 +1,3 @@
-/*
-
-Display stuff. Classes / functions related to screen updates / neopixel updates, etc.
-
-*/
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
@@ -11,6 +6,7 @@ Display stuff. Classes / functions related to screen updates / neopixel updates,
 #include <Audio.h>
 #include "Display.h"
 #include <vector>
+#include "Inputs.h"
 
 #define SCLK_PIN 13
 #define MOSI_PIN 11
@@ -28,6 +24,7 @@ int16_t prevInfoVal;
 uint32_t lastInfobarMillis = millis();          // when did we last show a new info bar
 const uint16_t infoBarDispTime = 700;           // How many millis until the banner goes awasy
 int16_t currentScreenIDX = 0;
+Screen* currentScreen;                          // Pointer to the current screen
 /*
 ***************************   Menus   **********************************
 
@@ -38,20 +35,6 @@ int16_t currentScreenIDX = 0;
 
 ************************************************************************
 */
-
-/*
-    Default menu (for now... ). This menu is where you can hold buttons to 
-    change p-lock params, etc.
-*/
-// class Screen
-// {
-//     char*    title;
-//     uint16_t titleColor;
-//     uint8_t  actionAreaWidth;
-//     uint8_t  actionAreaHeight;
-
-// };
-//std::vector<Screen> screens;
 
 Screen::Screen(char* Title, uint16_t TitleColor)
 {
@@ -92,7 +75,7 @@ const uint8_t pot_x_st       = 5;  // First pot position
 const uint8_t pot_line_width = (SCREEN_WIDTH / 6);
 const uint8_t pot_dot_radius = 3;
 const uint8_t pot_line_y     = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
-const uint8_t pot_val_y      = pot_line_y + pot_dot_radius + 5;
+const uint8_t pot_val_y      = pot_line_y + pot_dot_radius + 10;
 const uint8_t pot_label_y    = 98;
 const uint8_t pot_label_ht   = 8;
   
@@ -107,36 +90,70 @@ const uint8_t  slider_label_x1    = 30;
 const uint8_t  slider_label_x2    = SCREEN_WIDTH/2;
 const uint8_t  slider_labelbar_width = (SCREEN_WIDTH - (2*slider_label_x1))/2;
 
-// Draw slider A outline
-const uint16_t sliderA_x = screen_middle - sliderWidth - (sliderSpacing/2);    
-const uint16_t sliderA_y = 10;
-uint16_t       sliderAline_y = sliderA_y + (sliderHeight/2);        // Default to the middle
+// DJT - not used yet..
+const uint8_t  text_height = 6;
 
-// Draw slider B outline
-const uint16_t sliderB_x = sliderA_x + sliderSpacing + sliderWidth;
-const uint16_t sliderB_y = sliderA_y;
-uint16_t       sliderBline_y = sliderB_y +(sliderHeight/2);
+// Title Bar
+const uint8_t  title_bar_y_start = 0;
+const uint8_t  title_bar_y_end   = 20;
+const uint8_t  title_bar_x_start = 0;
+const uint8_t  title_bar_x_end   = SCREEN_WIDTH;
+const uint8_t  title_bar_width  = title_bar_x_end - title_bar_x_start;
+const uint8_t  title_bar_height  = title_bar_y_end - title_bar_y_start;
 
-// Track where numbers go
-const uint8_t screen_slider_val_xl = sliderA_x - 20 - 20;
-const uint8_t screen_slider_val_xr = sliderB_x + sliderWidth + 5 + 20;  
-const uint8_t screen_slider_val_yl = sliderA_y + sliderHeight/2;
-const uint8_t screen_slider_val_yr = sliderB_y + sliderHeight/2;   
+// Action Zone 
+const uint8_t  action_zone_y_start = title_bar_y_end;
+const uint8_t  action_zone_y_end   = 90;
+const uint8_t  action_zone_x_start = 0;
+const uint8_t  action_zone_x_end   = SCREEN_WIDTH;
+const uint8_t  action_zone_width   = action_zone_x_end - action_zone_x_start;
+const uint8_t  action_zone_height  = action_zone_y_end - action_zone_y_start;
 
-// Tracking variables.... need to know previous screen values to erase efficeintly
-uint8_t valA_prev;
-uint8_t valB_prev;
-uint8_t valALineY_prev;
-uint8_t valBLineY_prev;
-uint8_t pointerLineA_x1_prev;
-uint8_t pointerLineA_y1_prev;
-uint8_t pointerLineA_x2_prev;
-uint8_t pointerLineA_y2_prev;
+// Info Zone
+const uint8_t  info_zone_y_start = action_zone_y_end + 1;
+const uint8_t  info_zone_y_end   = 128;
+const uint8_t  info_zone_x_start = 0;
+const uint8_t  info_zone_x_end   = SCREEN_WIDTH;
+const uint8_t  info_zone_width   = info_zone_x_end - info_zone_x_start;
+const uint8_t  info_zone_height  = info_zone_y_end - info_zone_y_start;
 
-uint8_t pointerLineB_x1_prev;
-uint8_t pointerLineB_y1_prev;
-uint8_t pointerLineB_x2_prev;
-uint8_t pointerLineB_y2_prev;
+// sliders
+const uint8_t  slider_label_zone_height        = 8;
+const uint8_t  slider_label_zone_y_start       = info_zone_y_start;
+const uint8_t  slider_label_zone_y_end         = slider_label_zone_y_start + slider_label_zone_height;
+const uint8_t  slider_label_zone_text_y        = slider_label_zone_y_end - 5;
+const uint8_t  slider_label_zone_text_x_left   = 0;
+const uint8_t  slider_label_zone_text_x_right  = SCREEN_WIDTH /2;
+const uint8_t  slider_val_width                = 4;
+const uint8_t  slider_val_y_start              = slider_label_zone_y_end + 5;
+const uint8_t  slider_val_y_end                = SCREEN_HEIGHT;
+const uint8_t  slider_val_x_left               = 0;
+const uint8_t  slider_val_x_right              = SCREEN_WIDTH - slider_val_width;
+
+// Pots
+const uint8_t  info_pot_x_start    = 6;
+const uint8_t  info_pot_y_start    = slider_label_zone_y_end + 1; 
+const uint8_t  info_pot_dot_radius = 3;
+const uint8_t  info_pot_width      = (SCREEN_WIDTH - (2 * info_pot_x_start))/4;
+const uint8_t  info_pot_line_y     = info_pot_y_start + (2 * info_pot_dot_radius) + 5;
+const uint8_t  info_pot_label_y    = SCREEN_HEIGHT - 5;
+const uint8_t  info_pot_line_width = info_pot_width - info_pot_dot_radius * 2;
+// pot 1
+const uint8_t  info_pot1_x_start   = info_pot_x_start;
+const uint8_t  info_pot1_x_end     = info_pot1_x_start + info_pot_width - 1;
+const uint8_t  info_pot1_line_x_start   = info_pot1_x_start + info_pot_dot_radius;
+// pot 2
+const uint8_t  info_pot2_x_start   = info_pot1_x_end;
+const uint8_t  info_pot2_x_end     = info_pot2_x_start + info_pot_width - 1;
+const uint8_t  info_pot2_line_x_start   = info_pot2_x_start + info_pot_dot_radius;
+// pot 3
+const uint8_t  info_pot3_x_start = info_pot2_x_end;
+const uint8_t  info_pot3_x_end   = info_pot3_x_start + info_pot_width - 1;
+const uint8_t  info_pot3_line_x_start   = info_pot3_x_start + info_pot_dot_radius;
+// pot 4
+const uint8_t  info_pot4_x_start = info_pot3_x_end;
+const uint8_t  info_pot4_x_end   = info_pot4_x_start + info_pot_width - 1;
+const uint8_t  info_pot4_line_x_start   = info_pot4_x_start + info_pot_dot_radius;
 
 /*
 *************************** Functions **************************
@@ -149,254 +166,38 @@ void initScreens(void)
     screens.push_back(Screen("Step Edit", ORANGE_5));
     screens.push_back(Screen("Screen 2", YELLOW_5));
     screens.push_back(Screen("Screen 3", PURPLE_5));
+
+    screens[0].initInputBankGlobal(1, "atk","rel","sum","verb","slider","sldd");
+    screens[0].initInputBankStep  (1, "atk","rel","sum","verb","slider","sldd");
+    screens[0].setPrevInputBankGlobal();   // Acts kind of like an initializer.. current bank members not set before this
+    screens[0].setPrevInputBankStep();
+
+    // We are saying - when these pots change while a sequence button is NOT pressed, run the passed in function
+    // - - Functions need to have 1 parameter - an INT representing the sequencer step
+    // Note - can use VOIDCALLBACK if no action is needed.
+    screens[0].initInputFunctionsGlobal(1, setHeadphoneVolume, VOIDCALLBACK,   // DJT TESTING 
+                                        z_callback_tester1, z_callback_tester2,
+                                        z_callback_tester1, z_callback_tester2);
+
+    // Same as above, but only run if a step button is presssed.                                   
+    screens[0].initInputFunctionsStep(1, z_callback_tester1, VOIDCALLBACK,     // DJT TESTING 
+                                    z_callback_tester1, z_callback_tester2,
+                                    z_callback_tester1, z_callback_tester2);
+
+    currentScreen = &screens[currentScreenIDX];
 }
 
 void initOled(void)
 {
-    //oled.begin();
     oled.begin(16000000);
     oled.fillScreen(BLACK);
     oled.setRotation(2);
     drawCurrentTitleBar();
-    //z_drawMascotBitmap();
 }
 
 void drawCurrentTitleBar(void)
 {
     screens[currentScreenIDX].drawTitleBarMnu();
-}
-
-void draw_sliders(int8_t valA, int8_t valB)
-{
-    // SPI.setMOSI(MOSI_PIN);
-    // SPI.setSCK(SCLK_PIN);
-    oled.fillScreen(BLACK);
-
-    // Map the pot values to pixel y value
-    uint8_t valALineY = sliderA_y + sliderHeight - map(valA, -50, 50, 0, sliderHeight);  
-    uint8_t valBLineY =  sliderB_y + sliderHeight - map(valB, -50, 50, 0, sliderHeight);
-
-    // Draw the rectangles
-    oled.drawRect(sliderA_x, sliderA_y, sliderWidth, sliderHeight, BLUE_4);
-    oled.drawRect(sliderB_x, sliderB_y, sliderWidth, sliderHeight, GREEN_4); 
-
-    // draw the mid line
-    oled.drawFastHLine(sliderA_x, sliderA_y + sliderHeight/2, sliderWidth, BLUE_2);
-    oled.drawFastHLine(sliderB_x, sliderB_y + sliderHeight/2, sliderWidth, GREEN_2);
-
-    // draw the line representing the pot value
-    oled.drawFastHLine(sliderA_x - 5, valALineY, sliderWidth + 5, BLUE_5);
-    oled.drawFastHLine(sliderB_x, valBLineY, sliderWidth + 5, GREEN_5);
-
-    // Draw the angled line to the value numebr
-    uint8_t pointerLineA_x1 = sliderA_x - 20;
-    uint8_t pointerLineA_y1 = sliderA_y + sliderHeight/2;
-    uint8_t pointerLineA_x2 = sliderA_x - 5;
-    uint8_t pointerLineA_y2 = valALineY;
-
-    uint8_t pointerLineB_x1 = sliderB_x + sliderWidth + 20;
-    uint8_t pointerLineB_y1 = valBLineY;
-    uint8_t pointerLineB_x2 = sliderB_x + sliderWidth + 5;
-    uint8_t pointerLineB_y2 = sliderB_y + sliderHeight/2;
-
-    oled.drawLine(pointerLineA_x1, pointerLineA_y1, pointerLineA_x2, pointerLineA_y2, BLUE_4);
-    oled.drawLine(pointerLineB_x1, pointerLineB_y2, pointerLineB_x2, pointerLineB_y1, GREEN_4);
-
-    // Draw the numbers
-    oled.setTextSize(1);
-    oled.setTextColor(BLUE_5);
-    oled.setCursor(pointerLineA_x1 - 15, pointerLineA_y1);
-    oled.println(valA);
-
-    oled.setTextColor(GREEN_5);
-    oled.setCursor(pointerLineB_x2 + 15, pointerLineB_y2);
-    oled.println(valB);
-}
-
-void update_sliders_thin(int8_t valA, int8_t valB)
-{
-    // clear prev
-    oled.fillRect(0, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
-    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
-    oled.fillRect(0, slider_val_label_y, 20, 10, BLACK);
-    oled.fillRect(SCREEN_WIDTH - 18, slider_val_label_y, 20, 10, BLACK);
-    //oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - sliderThinHeight, sliderThinWidth, SCREEN_HEIGHT, BLACK);
-
-    // Draw the rectangles
-    uint8_t valAMapped = map(valA ,0,100,0,sliderThinHeight);
-    uint8_t valBMapped = map(valB ,0,100,0,sliderThinHeight);
-
-    oled.fillRect(0, SCREEN_HEIGHT - valAMapped, sliderThinWidth, valAMapped, GREEN_2);
-    oled.fillRect(SCREEN_WIDTH - sliderThinWidth, SCREEN_HEIGHT - valBMapped, sliderThinWidth, valBMapped, BLUE_2);
-
-    //Draw the numbers
-    oled.setTextSize(1);
-    oled.setTextColor(GREEN_5);
-    oled.setCursor(0, slider_val_label_y);
-    oled.println(valA);
-
-    oled.setTextColor(BLUE_5);
-    oled.setCursor(SCREEN_WIDTH - 18, slider_val_label_y);
-    oled.println(valB);
-}
-
-void update_sliders(int8_t valA, int8_t valB)
-{
-    // Map the pot values to pixel y value
-    uint8_t valALineY = sliderA_y + sliderHeight - map(valA, -50, 50, 0, sliderHeight);  
-    uint8_t valBLineY =  sliderB_y + sliderHeight - map(valB, -50, 50, 0, sliderHeight);
-
-    // draw the line representing the pot value
-    oled.drawFastHLine(sliderA_x - 5, valALineY_prev, sliderWidth + 5, BLACK);
-    oled.drawFastHLine(sliderB_x, valBLineY_prev, sliderWidth + 5, BLACK);
-    oled.drawFastHLine(sliderA_x - 5, valALineY, sliderWidth + 5, BLUE_5);
-    oled.drawFastHLine(sliderB_x, valBLineY, sliderWidth + 5, GREEN_5);
- 
-    // Draw the angled line to the value numebr
-    uint8_t pointerLineA_x1 = sliderA_x - 20;
-    uint8_t pointerLineA_y1 = sliderA_y + sliderHeight/2;
-    uint8_t pointerLineA_x2 = sliderA_x - 5;
-    uint8_t pointerLineA_y2 = valALineY;
-
-    uint8_t pointerLineB_x1 = sliderB_x + sliderWidth + 20;
-    uint8_t pointerLineB_y1 = valBLineY;
-    uint8_t pointerLineB_x2 = sliderB_x + sliderWidth + 5;
-    uint8_t pointerLineB_y2 = sliderB_y + sliderHeight/2;
-
-    oled.drawLine(pointerLineA_x1_prev, pointerLineA_y1_prev, pointerLineA_x2_prev, pointerLineA_y2_prev, BLACK);
-    oled.drawLine(pointerLineB_x1_prev, pointerLineB_y2_prev, pointerLineB_x2_prev, pointerLineB_y1_prev, BLACK);
-    oled.drawLine(pointerLineA_x1, pointerLineA_y1, pointerLineA_x2, pointerLineA_y2, BLUE_4);
-    oled.drawLine(pointerLineB_x1, pointerLineB_y2, pointerLineB_x2, pointerLineB_y1, GREEN_4);
-
-    // Draw the numbers
-    oled.fillRect(screen_slider_val_xl, screen_slider_val_yl, 20, 10, BLACK);
-    oled.fillRect(screen_slider_val_xr, screen_slider_val_yr, 20, 10, BLACK);
-
-    oled.setTextSize(1);
-
-    oled.setTextColor(BLUE_5);
-    oled.setCursor(screen_slider_val_xl, screen_slider_val_yl);
-    oled.println(valA);
-
-    oled.setTextColor(GREEN_5);
-    oled.setCursor(screen_slider_val_xr, screen_slider_val_yr);
-    oled.println(valB);
-
-    // Save of prev values for erasing
-    valA_prev = valA;
-    valB_prev = valB;
-    valALineY_prev = valALineY;
-    valBLineY_prev = valBLineY;
-    pointerLineA_x1_prev = pointerLineA_x1;
-    pointerLineA_y1_prev = pointerLineA_y1;
-    pointerLineA_x2_prev = pointerLineA_x2;
-    pointerLineA_y2_prev = pointerLineA_y2;
-    pointerLineB_x1_prev = pointerLineB_x1;
-    pointerLineB_y1_prev = pointerLineB_y1;
-    pointerLineB_x2_prev = pointerLineB_x2;
-    pointerLineB_y2_prev = pointerLineB_y2;
-
-}
-
-// Draws values of the underscreen pots on the bottom portion of the screen
-//      Pot number = 1 - 4
-void update_pot_val(uint8_t potNumber, uint8_t potVal)
-{
-    if (potNumber < 1) potNumber = 1;
-    if (potNumber > 4) potNumber = 4;
-
-    clear_pot_val(potNumber); 
-    uint32_t pot_color = yellows[potNumber];
-
-    // Set coordinates for pot 1
-    uint8_t x    = pot_x_st;
-    uint8_t y    = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
-    uint8_t xDot = map(potVal, 0, 100, 0, pot_line_width);
-
-    // Now modify x for pots that are not 1
-    if (potNumber > 1){
-        potNumber = potNumber -1;
-        x = x + (screen_qtr_2_x * potNumber);
-    }
-    oled.drawFastHLine(x, y, pot_line_width, pot_color);
-    oled.fillCircle(x + xDot,y,pot_dot_radius, pot_color);
-    oled.setCursor(x, pot_val_y);
-    oled.setTextColor(pot_color);
-    oled.print(potVal);
-}
-
-void update_pot_label(uint8_t potNumber, char* label)
-{
-    if (potNumber < 1) potNumber = 1;
-    if (potNumber > 4) potNumber = 4;
-    clear_pot_label(potNumber); 
-
-    uint32_t color = yellows[potNumber];
-    uint8_t  x     = pot_x_st - pot_dot_radius + 2;
-    if (potNumber > 1){
-        potNumber = potNumber -1;
-        x = x + (screen_qtr_2_x * potNumber);
-    }
-    oled.setCursor(x, pot_label_y);
-    oled.setTextColor(color);
-    oled.println(label);
-}
-
-void clear_pot_label(uint8_t potNumber)
-{
-    uint8_t x = pot_x_st - pot_dot_radius + 2;
-    if (potNumber > 1){
-        potNumber = potNumber -1;
-        x = x + (screen_qtr_2_x * potNumber);
-    }
-    oled.fillRect(x, pot_label_y, pot_line_width + pot_dot_radius + 1, pot_label_ht, BLACK);
-}
-
-// Erase existing pot drawing
-void clear_pot_val(uint8_t potNumber)
-{
-    if (potNumber < 1) potNumber = 1;
-    if (potNumber > 4) potNumber = 4;
-
-    // Set coordinates for pot 1
-    uint8_t x = pot_x_st - (pot_dot_radius);
-    uint8_t y = pot_line_y - pot_dot_radius - 1;
-    uint8_t width = pot_line_width + (pot_dot_radius * 2) + 1;
-    uint8_t height = SCREEN_HEIGHT - y;
-
-    // Now modify x for pots that are not 1
-    if (potNumber > 1){   
-        potNumber = potNumber -1;
-        x = x + (screen_qtr_2_x * potNumber);
-    }
-    oled.fillRect(x, y, width, height, BLACK);
-   //oled.drawRect(x, y, width, height, PURPLE_4);
-}
-
-void update_slider_label(uint8_t sliderNumber, char* label)
-{
-    clear_slider_label(sliderNumber);
-
-    if (sliderNumber == 1){
-        oled.setCursor(slider_label_x1, slider_val_label_y);
-        oled.setTextColor(GREEN_5);
-        oled.print(label);
-    }
-
-    if (sliderNumber == 2){
-        oled.setCursor(slider_label_x2, slider_val_label_y);
-        oled.setTextColor(BLUE_5);
-        oled.print(label);
-    }
-}
-
-void clear_slider_label(uint8_t sliderNumber)
-{
-    uint8_t x;
-    if (sliderNumber ==1) x = slider_label_x1;
-    if (sliderNumber ==2) x = SCREEN_WIDTH/2;
-
-    oled.fillRect(x, slider_val_label_y, slider_labelbar_width, 10, BLACK);
 }
 
 void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size = 1, int color)
@@ -437,11 +238,6 @@ void drawTitleBar(char * text, uint16_t color)
     oled.print(text);
 }
 
-// void drawCurrentTitleBar(void)
-// {
-//     drawTitleBar(screens[currentScreenIDX].title, screens[currentScreenIDX].titleColor);
-// }
-
 void eraseInfoBar(void)
 {
     oled.fillRect(0,0, SCREEN_WIDTH, infoBarHeight + 3, BLACK);
@@ -461,6 +257,384 @@ void checkInfoBar(void)
         drawCurrentTitleBar();
         infoBarSetStatus(false);
     }
+}
+
+// DJT - update this to deal with displaying the number value temporarily.. maybe just in a common zone of the screen? But not important.
+void update_pot_display_val_IDX(uint8_t idx)
+{
+    uint8_t val = getInputValueByIDX(idx);
+    uint8_t x = 0;
+    uint8_t y =  info_pot_line_y;
+    uint8_t dot_x;
+    uint16_t color = yellows[idx];
+
+    switch (idx){
+    case 0:
+        x = info_pot1_line_x_start;
+        break;
+    case 1:
+         x = info_pot2_line_x_start;
+        break;
+    case 2:
+        x = info_pot3_line_x_start;
+        break;
+    case 3:
+        x = info_pot4_line_x_start;
+        break;
+    default:
+        break;
+    }
+    dot_x = x + map(val, 0, 100, 0, pot_line_width);
+    oled.fillRect(x - pot_dot_radius - 1, y - pot_dot_radius - 1, info_pot_width, pot_dot_radius * 2 + 2, BLACK);
+    oled.fillCircle(dot_x, info_pot_line_y, pot_dot_radius, color);
+    oled.drawFastHLine(x, y, info_pot_line_width, color);
+}
+
+void update_slider_display_val_IDX(uint8_t idx)
+{
+    uint8_t val = getInputValueByIDX(idx);
+    uint8_t  x = 0;
+    uint8_t  y = map(val, 0, 100, SCREEN_HEIGHT, slider_val_y_start);
+
+    uint16_t color;
+    if (idx == 1) {
+        x = 0;
+        color = GREEN_4;
+    }
+    if (idx == 2) {
+        x = slider_val_x_right;
+        color = BLUE_4;
+    }
+    oled.fillRect(x, slider_val_y_start, slider_val_width, SCREEN_HEIGHT, BLACK);
+    oled.fillRect(x, y, slider_val_width, SCREEN_HEIGHT - y, color);
+}
+
+void update_pot_1_label_global(void)
+{
+    update_pot_label_IDX(1,currentScreen->inputBankGlobal_current[0]);
+}
+
+void update_pot_2_label_global(void)
+{
+    update_pot_label_IDX(2,currentScreen->inputBankGlobal_current[1]);
+}
+
+void update_pot_3_label_global(void)
+{
+    update_pot_label_IDX(3,currentScreen->inputBankGlobal_current[2]);
+}
+
+void update_pot_4_label_global(void)
+{
+    update_pot_label_IDX(4,currentScreen->inputBankGlobal_current[3]);
+}
+
+void update_slider_1_label_global(void)
+{
+    update_slider_label_IDX(1,currentScreen->inputBankGlobal_current[4]);
+}
+
+void update_slider_2_label_global(void)
+{
+    update_slider_label_IDX(2,currentScreen->inputBankGlobal_current[5]);
+}
+
+void update_pot_label_IDX(uint8_t idx, char* label)
+{
+    uint8_t x = 0;
+    uint8_t y =  info_pot_label_y - text_height;
+    uint16_t color = yellows[idx];
+
+    switch (idx)
+    {
+    case 1:
+        x = info_pot1_x_start;
+        break;
+    case 2:
+         x = info_pot2_x_start;
+        break;
+    case 3:
+        x = info_pot3_x_start;
+        break;
+    case 4:
+        x = info_pot4_x_start;
+        break;
+
+    default:
+        break;
+    }
+    oled.fillRect(x, y, info_pot_width, text_height + 2, BLACK);
+    oled.setCursor(x+2, y);
+    oled.setTextColor(color);
+    oled.println(label);
+    //oled.drawRect(x, y, info_pot_width, text_height, BLUE_2);
+}
+
+void update_slider_label_IDX(uint8_t idx, char* label)
+{
+    uint8_t x;
+    uint8_t y =  slider_label_zone_text_y;
+    uint16_t color;
+    if (idx == 1) {
+        x = slider_label_zone_text_x_left;
+        color = GREEN_5;
+    }
+    if (idx == 2) {
+        x = slider_label_zone_text_x_right;
+        uint16_t boundx;
+        uint16_t boundy;
+        uint16_t boundw;
+        uint16_t boundh;
+        oled.getTextBounds(label, x, y, &boundx, &boundy, &boundw, &boundh); 
+        x = SCREEN_WIDTH - boundw;
+        color = BLUE_5;
+    }
+    oled.setCursor(x,y);
+    oled.setTextColor(color);
+    oled.print(label);
+}
+
+void nextScreen(void)
+{
+    currentScreenIDX++;
+    if (currentScreenIDX > (screens.size() - 1)) currentScreenIDX = 0;
+    currentScreen = &screens[currentScreenIDX];
+}
+
+void prevScreen(void)
+{
+    currentScreenIDX--;
+    if (currentScreenIDX < 0) currentScreenIDX = screens.size() - 1;
+    currentScreen = &screens[currentScreenIDX];
+}
+
+void Screen::setNextInputBankGlobal(void)
+{
+    inputBankGlobal_IDX++;
+    if (inputBankGlobal_IDX > 2) inputBankGlobal_IDX = 2;
+    switch (inputBankGlobal_IDX){
+    case 0:
+        inputBankGlobal_current = inputBankGlobal_1;
+        break;
+    case 1:
+        inputBankGlobal_current = inputBankGlobal_2;
+        break;
+    case 2:
+        inputBankGlobal_current = inputBankGlobal_3;
+        break;
+    default:
+        inputBankGlobal_current = inputBankGlobal_1;
+        break;
+    }
+}
+
+void Screen::setPrevInputBankGlobal(void)
+{
+    inputBankGlobal_IDX--;
+    if (inputBankGlobal_IDX < 0) inputBankGlobal_IDX = 0;
+    switch (inputBankGlobal_IDX){
+    case 0:
+        if (!(inputBankGlobal_1.size() > 0)) break;    // If nothing is in the bank, don't change
+        inputBankGlobal_current = inputBankGlobal_1;
+        break;
+    case 1:
+        if (!(inputBankGlobal_2.size() > 0)) break;
+        inputBankGlobal_current = inputBankGlobal_2;
+        break;
+    case 2:
+        if (!(inputBankGlobal_2.size() > 0)) break;
+        inputBankGlobal_current = inputBankGlobal_3;
+        break;
+    default:
+        inputBankGlobal_current = inputBankGlobal_1;
+        break;
+    }
+}
+
+void Screen::setNextInputBankStep(void)
+{
+    inputBankStep_IDX++;
+    if (inputBankStep_IDX > 2) inputBankStep_IDX = 2;
+    switch (inputBankStep_IDX){
+    case 0:
+        if (!(inputBankStep_1.size() > 0)) break;
+        inputBankStep_current = inputBankStep_1;
+        break;
+    case 1:
+        if (!(inputBankStep_2.size() > 0)) break;
+        inputBankStep_current = inputBankStep_2;
+        break;
+    case 2:
+        if (!(inputBankStep_3.size() > 0)) break;
+        inputBankStep_current = inputBankStep_3;
+        break;
+    default:
+        inputBankStep_current = inputBankStep_1;
+        break;
+    }
+}
+
+void Screen::setPrevInputBankStep(void)
+{
+    inputBankStep_IDX--;
+    if (inputBankStep_IDX < 0) inputBankStep_IDX = 0;
+    switch (inputBankStep_IDX){
+    case 0:
+        inputBankStep_current = inputBankStep_1;
+        break;
+    case 1:
+        inputBankStep_current = inputBankStep_1;
+        break;
+    case 2:
+        inputBankStep_current = inputBankStep_1;
+        break;
+    default:
+        inputBankStep_current = inputBankStep_1;
+        break;
+    }
+}
+
+void  Screen::initInputBankGlobal(uint8_t bank, char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
+                                    char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+{
+    if (bank < 1) bank = 1;
+    if (bank > 3) bank = 3;
+    std::vector<char*>* curbank;
+
+    switch (bank){
+    case 1:
+        curbank = &inputBankGlobal_1;
+        break;
+    case 2:
+        curbank = &inputBankGlobal_2;
+        break;
+    case 3:
+        curbank = &inputBankGlobal_3;
+        break;
+    default:
+        break;
+    }
+    curbank -> push_back(knob1);
+    curbank -> push_back(knob2);
+    curbank -> push_back(knob3);
+    curbank -> push_back(knob4);
+    curbank -> push_back(slider1);
+    curbank -> push_back(slider2);
+}
+
+void  Screen::initInputBankStep(uint8_t bank, char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
+                                    char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+{
+    if (bank < 1) bank = 1;
+    if (bank > 3) bank = 3;
+    std::vector<char*>* curbank;
+
+    switch (bank){
+    case 1:
+        curbank = &inputBankStep_1;
+        break;
+    case 2:
+        curbank = &inputBankStep_2;
+        break;
+    case 3:
+        curbank = &inputBankStep_3;
+        break;
+    default:
+        break;
+    }
+    curbank -> push_back(knob1);
+    curbank -> push_back(knob2);
+    curbank -> push_back(knob3);
+    curbank -> push_back(knob4);
+    curbank -> push_back(slider1);
+    curbank -> push_back(slider2);
+}
+
+void Screen::initInputFunctionsGlobal(uint8_t bank, callback knob1_func, callback knob2_func, 
+                                                callback knob3_func, callback knob4_func, 
+                                                callback slider1_func, callback slider2_func)
+{
+    if (bank < 1) bank = 1;
+    if (bank > 3) bank = 3;
+    std::vector<callback>* curbank;
+
+    switch (bank){
+    case 1:
+        curbank = &inputFunctionBankGlobal_1;
+        break;
+    case 2:
+        curbank = &inputFunctionBankGlobal_2;
+        break;
+    case 3:
+        curbank = &inputFunctionBankGlobal_3;
+        break;
+    default:
+        break;
+    }
+    curbank -> push_back(knob1_func);
+    curbank -> push_back(knob2_func);
+    curbank -> push_back(knob3_func);
+    curbank -> push_back(knob4_func);
+    curbank -> push_back(slider1_func);
+    curbank -> push_back(slider2_func);
+}
+
+void Screen::initInputFunctionsStep(uint8_t bank, callback knob1_func, callback knob2_func, 
+                                                callback knob3_func, callback knob4_func, 
+                                                callback slider1_func, callback slider2_func)
+{
+    if (bank < 1) bank = 1;
+    if (bank > 3) bank = 3;
+    std::vector<callback>* curbank;
+
+    switch (bank){
+    case 1:
+        curbank = &inputFunctionBankStep_1;
+        break;
+    case 2:
+        curbank = &inputFunctionBankStep_2;
+        break;
+    case 3:
+        curbank = &inputFunctionBankStep_3;
+        break;
+    default:
+        break;
+    }
+    curbank -> push_back(knob1_func);
+    curbank -> push_back(knob2_func);
+    curbank -> push_back(knob3_func);
+    curbank -> push_back(knob4_func);
+    curbank -> push_back(slider1_func);
+    curbank -> push_back(slider2_func);
+}
+
+void Screen::runInputFunctionGlobal(uint8_t input_idx)  // Given an input index (1 - 6), and the current screen / bank, run a function.
+{
+    int16_t val = getInputValueByIDX(input_idx);
+    switch (inputBankGlobal_IDX){
+        case 0:
+            inputFunctionBankGlobal_1[input_idx](val);
+            Serial.println("in case 1");
+            break;
+        case 1:
+            inputFunctionBankGlobal_2[input_idx](val);
+            break;
+        case 2:
+            inputFunctionBankGlobal_3[input_idx](val);
+            break;
+        default:
+            break;
+    }
+}
+
+void run_input_change_function_global(uint8_t input_idx)
+{
+    currentScreen->runInputFunctionGlobal(input_idx);
+}
+
+void run_input_change_function_step(uint8_t input_idx, uint8_t step_number)
+{
+    currentScreen->runInputFunctionStep(input_idx, step_number);
 }
 
 /*
@@ -499,6 +673,11 @@ void FUNderline(uint8_t startX, uint8_t startY, uint8_t length, uint16_t color)
         currentY = nextY;
         endX++;
     } 
+}
+
+void VOIDCALLBACK(int idx=0)
+{
+    Serial.println("Void Callback called. No action taken.");
 }
 
 void z_showAllColors(void)
@@ -582,3 +761,68 @@ void z_drawMascotBitmap(void)
     }
 }
 
+void z_drawScreenZones(void)
+{
+    // Title bar zone
+    uint16_t color = PURPLE_5;
+    oled.drawRect(title_bar_x_start, title_bar_y_start, title_bar_width
+    , title_bar_height, color);
+
+    // Action zone
+    oled.drawRect(action_zone_x_start, action_zone_y_start, action_zone_width
+    , action_zone_height, color);
+
+    // Info zone
+    oled.drawRect(info_zone_x_start, info_zone_y_start, info_zone_width
+    , info_zone_height, color);
+
+    color = PURPLE_4;
+    // Slider label zone
+    oled.drawRect(0, slider_label_zone_y_start, SCREEN_WIDTH, slider_label_zone_height, color);
+    delay(200);
+
+    color = PURPLE_3;
+    // Pot 1
+    oled.drawRect(info_pot1_x_start, info_pot_y_start, info_pot_width
+    , info_zone_height, color);
+        delay(200);
+
+    // Pot 2
+    oled.drawRect(info_pot2_x_start, info_pot_y_start, info_pot_width
+    , info_zone_height, color);
+        delay(200);
+
+    // Pot 3
+    oled.drawRect(info_pot3_x_start, info_pot_y_start, info_pot_width
+    , info_zone_height, color);
+        delay(200);
+
+    // Pot 4
+    oled.drawRect(info_pot4_x_start, info_pot_y_start, info_pot_width
+    , info_zone_height, color);
+        delay(200);
+    
+    color = YELLOW_5;
+
+    // Line representing label area of pot vals.
+    oled.drawFastHLine(0, info_pot_label_y, 128, color);
+
+    // Line representing label area of sliders
+    oled.drawFastHLine(0, slider_label_zone_text_y, 128, color);
+
+    color = YELLOW_3;
+    // Line representing pot value line (with tha dot)
+    oled.drawFastHLine(0, pot_line_y, 128, color);
+}
+//void callback_set_attack(int attack)
+void z_callback_tester1(int idx)
+{
+    Serial.println("callback worked??");
+    Serial.println(idx);
+}
+
+void z_callback_tester2(int idx)
+{
+    Serial.println("callback 2 worked??");
+        Serial.println(idx);
+}

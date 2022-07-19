@@ -7,6 +7,48 @@
 
 extern Adafruit_NeoPixel strip;
 
+// Defaults
+#define DEFAULT_FILT_FREQ      17000
+#define DEFAULT_FILT_Q          0.7
+#define DEFAULT_CRUSH_BITDEPTH  16
+#define DEFAULT_CRUSH_FREQ     44100
+#define DEFAULT_NOISE_LVL      0.5
+#define DEFAULT_DRUM_FREQ      300
+#define DEFAULT_DRUM_PMOD      0.6
+#define DEFAULT_DRUM_LENGTH    100
+#define DEFAULT_DRUM_MIX2      0 
+// Drum
+#define MIN_DRUM_FREQUENCY      25
+#define MAX_DRUM_FREQUENCY      800
+#define MIN_DRUM_LEN           1      //ms
+#define MAX_DRUM_LEN           500    //ms
+#define MIN_DRUM_PMOD          0.3
+#define MAX_DRUM_PMOD          0.7   
+#define MIN_DRUM_MIX2          0
+#define MAX_DRUM_MIX2          0.5   // IDK what the units even are. needt to test   
+// Filter / FX
+#define MIN_FILTER_FREQ        20
+#define MAX_FILTER_FREQ        20000
+#define MIN_FILTER_Q           0.7
+#define MAX_FILTER_Q           4
+#define MIN_CRUSH_BITDEPTH     3
+#define MAX_CRUSH_BITDEPTH     16
+#define MIN_CRUSH_FREQ         1000
+#define MAX_CRUSH_FREQ         44100
+#define MIN_RATCHET            0
+#define MAX_RATCHET            4
+// ASDR / Basic
+#define MIN_VOICE_VOL          0
+#define MAX_VOICE_VOL          0.6
+#define MIN_ATTACK             0
+#define MAX_ATTACK             500   
+#define MIN_RELEASE            10
+#define MAX_RELEASE            2000
+#define MIN_SUSTAIN            0.2
+#define MAX_SUSTAIN            1.0
+#define MIN_DECAY              0
+#define MAX_DECAY              2000
+
 // Need to track each step individually for param locks and suck
 class Step {
     private:
@@ -54,32 +96,32 @@ class Step {
         uint8_t  getVoiceNumber(void){return voice -> getID();}
         uint16_t getVoiceAttack(void){return voice -> getAttack();}
 
-        // -------- Setters --------//
-        void flipState(void){state = !state;}
-        void stepOn(void) {state = true;}
-        void stepOff(void) {state = false;}
-        void setAttack(uint16_t envAttack);
-        void setRelease(uint16_t envRelease);
-        void setDecay(uint16_t envDecay);
-        void setSustain(uint16_t envSustain);
-        void setRatchetCount(uint8_t ratchCount) {ratchetCount = ratchCount;}
-        void setSwingMillis(int32_t swingMill) {swingMcros = swingMill * 1000;}  //djt - prob get rid of this?
-        void setSwingMicros(int32_t swingMicr) {swingMcros = swingMicr;}
-        void setVolume(uint16_t vol){volume = vol;}
-        void setPlayingState(bool playstate){played = playstate;} 
-        void setColor(uint32_t colour){color = colour;}
+        // -------- Setters --------//  ---- ALL expect an input of 0 - 100.
+        void setColor  (uint32_t colour){color = colour;}
+        void flipState (void){state = !state;}
+        void stepOn    (void) {state = true;}
+        void stepOff   (void) {state = false;}
+        void setAttack (uint8_t val);
+        void setRelease(uint8_t val);
+        void setDecay  (uint8_t val);
+        void setSustain(uint8_t val);
+
+        void setRatchetCount (uint8_t val);
+        void setSwingMicros  (int32_t swingMicr);
+        void setVolume       (uint8_t val);
+        void setPlayingState (bool playstate);
         
         // drum voice
-        void setDrumPMod(float pmod)     {drumPMod = pmod;}
-        void setDrumLength(uint16_t len) {drumLength = len;}
-        void setDrumMix2(float mix2)     {drum2ndHitMix = mix2;}
-        void setDrumFreq(uint16_t freq)  {drumFreq = freq;}
+        void setDrumPMod      (uint8_t val);
+        void setDrumLength    (uint8_t val);
+        void setDrumMix2      (uint8_t val);
+        void setDrumFreq      (uint8_t val);
 
         // fx n filter
-        void setBitCrushDepth(uint8_t depth) {bitcrushDepth = depth;}
-        void setBitCrushRate(uint16_t freq)  {bitcrushSampRate = freq;}
-        void setFiltFreq(uint16_t freq)      {filterFreq = freq;}
-        void setFilterQ(float q)             {filterQ = q;}
+        void setBitCrushDepth  (uint8_t val);
+        void setBitCrushRate   (uint8_t val);
+        void setFiltFreq       (uint8_t val);
+        void setFilterQ        (uint8_t val);
 };
 
 // Class for our sequencer. Track bpm, num steps, etc.
@@ -106,6 +148,9 @@ class Sequencer {
         int8_t colorSetIDX;                // corresponsds to a set of 5 colors
         uint32_t color;                    // Color of the scrolling seq light
         Sequencer(uint8_t, uint8_t);
+        static std::vector<Sequencer*> allSequencers;
+        static int8_t curSequencerIDX;
+        static uint8_t numSequencers;
         void initializeSteps(void);
         bool newStep(void);
         bool newNote(void);                                         // Check if it's time for a new note to play. Not necessarily when the step hits (swing, etc.).
@@ -175,7 +220,7 @@ class Sequencer {
         // Filter
         void setStepFiltFreqAtIndex(uint8_t idx, uint16_t freq);
         void setStepFilterQAtIndex(uint8_t idx, float q);
-        // Drum stuff
+        // Drum stuffs
         void setDrumPModAtIndex(uint8_t idx, float pmod);
         void setDrumLengthAtIndex(uint8_t idx, uint16_t len);
         void setDrumMix2AtIndex(uint8_t idx, float mix2);
@@ -185,3 +230,8 @@ class Sequencer {
         void debugPrintSeqData(String message, bool extraSpace = false, bool detailed = true);
  
 };
+
+// ---- Callback functions for input handling ----- //
+
+// Setters
+ void setCurrSeqSwingAtIndex(uint8_t step_idx, uint8_t pot_idx);         // Pass a positive or negative value, from - 50 to 50

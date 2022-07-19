@@ -7,6 +7,7 @@
 #include <vector>
 #include "Audiostuff.h"
 #include "Sequencer.h"
+#include "Inputs.h"
 
 #include <Audio.h>
 #include <Wire.h>
@@ -124,34 +125,47 @@ void initAudio(void)
   // new Voice(&playSdWav4, &envelope4_L, &envelope4_R);  // djt - jjust for testing... make a few and put into array
 
   AudioInterrupts();
-  // // TESTING
-  // envelope_master_L.attack(0);
-  // envelope_master_L.decay(2000);
-  // envelope_master_L.release(2000);
-  // envelope_master_L.sustain(1);
-  // envelope_master_L.hold(0);
-  // envelope_master_R.attack(0);
-  // envelope_master_R.decay(500);
-  // envelope_master_R.release(500);
-  // envelope_master_R.sustain(1);
-  // envelope_master_R.hold(0);
 }
+/*
+     *********************** Global / Sequencer Level Functions *************************
+     ***************************************************************************************
+*/
 
 // Accepts a value from 0 - 100, maps to 0 - 0.8
-void setHeadphoneVolume(uint8_t potval)
+void setHeadphoneVolume(uint8_t val)
 {
-  if (potval < 0) potval = 0;
-  if (potval > 100) potval = 100;
-
-  float mappedVol = map(float(potval), 0, 100, 0, 0.7);
-  Serial.println("mapped val");
-  Serial.println(mappedVol);
+  float mappedVol = map(float(val), 0, 100, 0, 0.7);
   AudioNoInterrupts();
   sgtl5000_1.volume(mappedVol);
   AudioInterrupts();
 }
 
-// ------- Voice class stufffff --------///
+void setGlobalReverbLevel(uint8_t val = -1)  // Pot x callback function
+{
+  Serial.print("DJT CONFIGURE ME - set global reverb level");
+}
+
+void setGlobalDelayLevel(uint8_t val = -1) // Pot x callback function
+{
+  Serial.print("DJT CONFIGURE ME - set global delay level");
+}
+
+// -50 to 50
+// Idea is that this along with the next setting can set
+// swing every X steps. May want to do per sequencer.
+void setGlobalSwingAmt(int8_t val = 0) // Pot x callback function
+{
+  Serial.print("DJT CONFIGURE ME - set global Swing Value");
+}
+
+// Use with above setting. 2 = apply swing every 2 steps, 3 = every 3 steps, etc.
+void setGlobalSwingStepSpacing(int8_t val = 3) // Pot x callback function
+{
+  Serial.print("DJT CONFIGURE ME - set global Swing spacing");
+}
+
+
+// ------- Voice Class --------///
 uint8_t Voice::numVoices = 0;
 std::vector<Voice*> Voice::allVoices = {};
 Voice::Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r)  // Sampler constructor
@@ -282,8 +296,6 @@ Voice::Voice(AudioSynthSimpleDrum* drm, AudioEffectEnvelope* env) // Drum constr
 
   envelope_l -> releaseNoteOn(8);  // djt - idk if I want or need these... but whatev.
   envelope_r -> releaseNoteOn(8);
- 
-
 }
 
 void Voice::assignDefaultVoicesForSequencer(Sequencer* seq)
@@ -397,4 +409,20 @@ void Voice::setDrumLength(uint16_t len)
 {
   drumLength = len;
   drum->length(drumLength);
+}
+
+void Voice::setInputLabels(uint8_t bankNum, std::vector<char*> * labels)
+{
+  switch (bankNum)
+  {
+  case 1:
+  
+    break;
+  
+  case 2:
+    break;
+  
+  default:
+    break;
+  }
 }

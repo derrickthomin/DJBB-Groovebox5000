@@ -4,17 +4,15 @@
 #include "Common.h"
 
 #define STARTUP_NUM_VOICES 4    // How many voices to created
-#define DEFAULT_FILT_FREQ 17000
-#define DEFAULT_FILT_Q    0.7
-#define DEFAULT_CRUSH_BITDEPTH  16
-#define DEFAULT_CRUSH_FREQ     44100
-#define DEFAULT_NOISE_LVL      0.5
-#define DEFAULT_DRUM_FREQ      300
-#define DEFAULT_DRUM_PMOD      0.6
-#define DEFAULT_DRUM_LENGTH    100
-#define DEFAULT_DRUM_MIX2      0 
-#define DRUM_MIN_FREQ          30
-#define DRUM_MAX_FREQ          1000
+// #define DEFAULT_FILT_FREQ 17000
+// #define DEFAULT_FILT_Q    0.7
+// #define DEFAULT_CRUSH_BITDEPTH  16
+// #define DEFAULT_CRUSH_FREQ     44100
+// #define DEFAULT_NOISE_LVL      0.5
+// #define DEFAULT_DRUM_FREQ      300
+// #define DEFAULT_DRUM_PMOD      0.6
+// #define DEFAULT_DRUM_LENGTH    100
+// #define DEFAULT_DRUM_MIX2      0 
 
 
 class Voice
@@ -53,6 +51,11 @@ class Voice
         uint16_t filterFreq;
         float    filterQ;
 
+        // menu related
+        std::vector<char*> inputLabels_bank1;
+        std::vector<char*> inputLabels_bank2;
+        std::vector<char*> inputLabels_bank3;
+
     public:
         Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r);
         Voice(AudioSynthNoisePink* noise, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r, 
@@ -63,7 +66,8 @@ class Voice
         static uint8_t numVoices;                                                  // Track how many voices we have created altogether.
         static std::vector<Voice*> allVoices;                                      // Pointers to all voices. Voices get added automatically when created. DJT - may need to deal with deleting in the future.. but for now whatev
         static void assignDefaultVoicesForSequencer(Sequencer* seq);               // Logic to assign voices to each step based on number of voices. Kind of an "init" type deal.
-        void play(void);                                                           // Play the file or note. DJT - need logic to check what type of voice this is (could be a string, etc.)
+        void play(void);     
+        void setInputLabels(uint8_t bankNum, std::vector<char*> * labels);                                                      // Play the file or note. DJT - need logic to check what type of voice this is (could be a string, etc.)
 
         // -------- Getters --------//
         bool     isPlaying(void){return playingState;}                             // DJT - need to code out more logic to check play state... 
@@ -97,9 +101,19 @@ class Voice
 };
 
 void initAudio(void);
-void setHeadphoneVolume(uint8_t potval);                 // Set the headphone out volume. Takes in a value of 0-100.
+/*
+******************        Global-ish functions        *******************
+*************************************************************************
+*/
 
+void setHeadphoneVolume(uint8_t val);                 // Set the headphone out volume. Takes in a value of 0-100.
+void setGlobalReverbLevel(uint8_t val = -1);
+void setGlobalDelayLevel(uint8_t val = -1);
 
-// TESDTING
+// -50 to 50
+// Idea is that this along with the next setting can set
+// swing every X steps. May want to do per sequencer.
+void setGlobalSwingAmt(int8_t val = 0);
 
-extern AudioEffectEnvelope envelope_master_L;
+// Use with above setting. 2 = apply swing every 2 steps, 3 = every 3 steps, etc.
+void setGlobalSwingStepSpacing(int8_t val = 3);

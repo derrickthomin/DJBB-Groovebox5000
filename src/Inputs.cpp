@@ -39,22 +39,22 @@ bool seqButtonsNewQuickpress[16]     = {0};     // Track if there was a new pres
 elapsedMillis seqButtonOntime[16]    = {0};     // How long have buttone been pressed   
                          
 // Joystick & pots
-uint16_t knobAndJoystickNow[8]       = {0};
-uint16_t knobAndJoystickPrev[8]      = {0};
+uint8_t  knobAndJoystickNow[8]       = {0};
+uint8_t  knobAndJoystickPrev[8]      = {0};
 bool     knobAndJoystickNewPress[8]  = {0};     // Did the value change enough to count as a new press?
-uint16_t sliderPotsNow[2]            = {0};
+uint8_t  sliderPotsNow[2]            = {0};
 int8_t   slidePotBigchangeCounter[2] = {0};     // Used to determine if user rapidly changed value for a bit. Usually used as a param reset trigger.
-uint16_t sliderPotsPrev[2]           = {0};
+uint8_t  sliderPotsPrev[2]           = {0};
 bool     sliderPotsNewPress[2]       = {0};
 uint16_t joystickGuiLastX;
 uint16_t joystickGuiLastY;
 
 // Play button
-bool playButtoNow, playButtonState, playButtonQuickpress, 
-     playButtonDoublePress = false;
-bool playButtonPrev, playButtonStatePrev = false;
+bool     playButtoNow, playButtonState, playButtonQuickpress, 
+         playButtonDoublePress, playButtonPrev, playButtonStatePrev = false;
+uint32_t  playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
+
 elapsedMillis playButtonOntime = 0;
-uint32_t      playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
 
 /*
     ***************************** Input Checking **************************
@@ -124,11 +124,8 @@ bool checkAllInputs(void)                // Check the state of sequencer + updat
         if (knobAndJoystickNewPress[pin]) haveAnyChanged = true;
     }
 
-    if (testing && haveAnyChanged)
-    {
-       z__printArrayToSerial(8, knobAndJoystickNewPress);
-    }
-
+    if (testing && haveAnyChanged) z__printArrayToSerial(8, knobAndJoystickNewPress);
+  
     // Check Slide pots
     for (uint8_t i = 0; i < 2; i++)
     {
@@ -184,7 +181,6 @@ void processInputs(Sequencer& seq)
   // -- Process Sequecer buttons -- //
   for (uint8_t i = 0; i < seq.getNumSteps(); i++)
   {
-
     //   1)  new quck press - set or remove a step
     if (seqButtonsNewQuickpress[i]) 
     {
@@ -198,58 +194,56 @@ void processInputs(Sequencer& seq)
     {
       seqButtonHeld = true;
       drawInfoBar("Editing Step: ", i);
-      if (sliderAChanged())
-      {
-        int8_t sliderAValMapped = map(sliderAVal(), 0, 100, -50, 50);
-        int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
-        //update_sliders(sliderAValMapped, sliderBValMapped);
-        update_sliders_thin(sliderAVal(), sliderBVal());
-        seq.setSwingAtIndex(i, sliderAValMapped);
-        update_slider_label(1, "rel");
+
+      // Button held and Slider A Changed (input idx: 4)
+      if (sliderAChanged()){
+        int8_t input_idx = 4;
+        seq.setSwingAtIndex(i, sliderAVal());
+        update_slider_label_IDX(1, "rel");
+        update_slider_display_val_IDX(input_idx);
       }
-      if (sliderBChanged())
-      {
+ 
+      // Button held and Slider B Changed (input idx: 5)
+      if (sliderBChanged()){
+        int8_t input_idx = 5;
         Serial.println("slider b changed");
-        int8_t sliderAValMapped = map(sliderAVal(), 0, 100, -50, 50);
-        int8_t sliderBValMapped = map(sliderBVal(), 0, 100, -50, 50);
         uint16_t  envelopeVal = ((sliderBVal()+1) * 10);
-        //update_sliders(sliderAValMapped, sliderBValMapped);
-        update_sliders_thin(sliderAVal(), sliderBVal());
         seq.setStepDecayAtIndex(i, envelopeVal);
-        update_slider_label(2, " swing");
+        update_slider_label_IDX(2, "swng");
+        update_slider_display_val_IDX(input_idx);
       }
 
-      if (knob1Changed())
-      {
-        uint8_t potnum = 1;
-        update_pot_val(1, knob1Val());
-        update_pot_label(potnum, "atk");
+      // Button held and Pot/Knob 1 Changed (input idx: 1)
+      if (knob1Changed()){
+        int8_t input_idx = 0;
+        update_pot_display_val_IDX(input_idx);
+        //update_pot_1_label_global();
       }
 
-      if (knob2Changed())
-      {
-        uint8_t potnum = 2;
+      // Button held and Pot/Knob 2 Changed (input idx: 2)
+      if (knob2Changed()){
+        int8_t input_idx = 1;
         seq.setStepAttackAtIndex(i, knob2Val());
-        update_pot_val(2, knob2Val());
-        update_pot_label(potnum, "rel");
+        update_pot_display_val_IDX(input_idx);
+        update_pot_2_label_global();
+        //run_input_change_function_step(potnum, i);
       }
 
-      if (knob3Changed())
-      {
-        uint8_t potnum = 3;
-        uint16_t newFreq = map(knob3Val(), 0, 100, DRUM_MIN_FREQ, DRUM_MAX_FREQ);
-        seq.setDrumFreqAtIndex(i, newFreq);
-        update_pot_val(potnum, knob3Val());
-        update_pot_label(potnum, "swng");
+      // Button held and Pot/Knob 3 Changed (input idx: 3)
+      if (knob3Changed()){
+        int8_t input_idx = 2;
+        seq.setDrumFreqAtIndex(i, knob3Val());
+        update_pot_display_val_IDX(input_idx);
+        update_pot_3_label_global();
       }
-
-      if (knob4Changed())
-      {
-        uint8_t potnum = 4;
+      
+      // Button held and Pot/Knob 4 Changed (input idx: 4)
+      if (knob4Changed()){
+        int8_t input_idx = 3;
         float newpMod = map(knob4Val(), 0, 100, 0.3f, 0.7f);
         seq.setDrumPModAtIndex(i, newpMod);
-        update_pot_val(potnum, knob4Val());
-        update_pot_label(potnum, "ptch");
+        update_pot_display_val_IDX(input_idx);
+        update_pot_4_label_global();
       }
     }
   }
@@ -274,7 +268,6 @@ void processInputs(Sequencer& seq)
   if (playButtonOntime > longPressMillis)            // Holding play button... go to master settings
   {
     Serial.println("play button hold");
-    // if (knob1Changed()) setHeadphoneVolume(knob1Val());
   }
 
   if (seqButtonHeld) return;                         // Bail here if a button is being held.. these inputs were already handled above.
@@ -285,24 +278,39 @@ void processInputs(Sequencer& seq)
   // ----- Process Pots --------- //
   if (knob1Changed())                 
   {
-    setHeadphoneVolume(knob1Val());                  // Knob 1 == volume by default
-    update_pot_val(1, knob1Val());
+    uint8_t input_idx = 0;
+    update_pot_display_val_IDX(input_idx);
+    run_input_change_function_global(input_idx);
   }
   if (knob2Changed())                 
   {
-    update_pot_val(2, knob2Val());
+    uint8_t input_idx = 1;
+    update_pot_display_val_IDX(input_idx);
+    run_input_change_function_global(input_idx);
   }
   if (knob3Changed())                 
   {
-    update_pot_val(3, knob3Val());
+    uint8_t input_idx = 2;
+    update_pot_display_val_IDX(input_idx);
+    run_input_change_function_global(input_idx);
   }
-  if (knob4Changed())                 
+  if (knob4Changed())
   {
-    update_pot_val(4, knob4Val());
+    uint8_t input_idx = 3;
+    update_pot_display_val_IDX(input_idx);
+    run_input_change_function_global(input_idx);
   }
-
 
   // ------ Process Joystick ----- //
+
+  if (joystickXChanged())
+  {
+    ;
+  }
+  if (joystickYChanged())
+  {
+    ;
+  }
   if (joystickXChanged() || joystickYChanged())
   {
     uint16_t x = map(int(joystickXVal()),0,100,0,SCREEN_WIDTH);
@@ -363,17 +371,58 @@ uint8_t  knob4Val(void){return knobAndJoystickNow[4];}                  // Retur
 // Joystick inputs
 bool     joystickYChanged(void){return knobAndJoystickNewPress[7];}     // Returns true if Y value of joystick changed
 bool     joystickXChanged(void){return knobAndJoystickNewPress[5];}     // Returns true if X value of joystick changed
+bool     joystickButtonChanged(void){return knobAndJoystickNewPress[6];}  
+
 uint8_t  joystickYVal(void){return knobAndJoystickNow[7];}              // Returns Current val of Joystick Y
 uint8_t  joystickXVal(void){return knobAndJoystickNow[5];}              // Returns Current val of Joystick X
+uint8_t  joystickButtonVal(void){return knobAndJoystickNow[6];} 
 uint8_t  joystickXValPrev(void){return knobAndJoystickPrev[7];}
 uint8_t  joystickYValPrev(void){return knobAndJoystickPrev[5];}
 
 // Slider inputs
 bool     sliderAChanged(void){return sliderPotsNewPress[0];}            // Returns true if slider A changed
 bool     sliderBChanged(void){return sliderPotsNewPress[1];}            // Returns true if slider B changed
-uint16_t sliderAVal(void){return sliderPotsNow[0];}                     // Returns current val of Slider A
-uint16_t sliderBVal(void){return sliderPotsNow[1];}                     // Returns current val of Slider B
+uint8_t  sliderAVal(void){return sliderPotsNow[0];}                     // Returns current val of Slider A
+uint8_t  sliderBVal(void){return sliderPotsNow[1];}                     // Returns current val of Slider B
 
+/*
+                                   Input IDX Info:
+
+        I shoulda used one big array to store all current / prev input values, but did not.
+        Because of this, we have to do some mappping for use in other functions that just
+        accept an input index and need to do something. Shuld re-think this later..
+
+        IDX - Input
+        -----------
+        0   - Pot / Knob 1
+        1   - Pot / Knob 2
+        2   - Pot / Knob 3
+        3   - Pot / Knob 4
+        4   - Slider A / 1
+        5   - Slider A / 2
+        6   - Joystick X
+        7   - Joystick Y
+        8   - Joystick Button
+        9   - Play button
+*/
+
+uint8_t getInputValueByIDX(uint8_t idx)
+{
+  switch (idx)
+  {
+  case 0: return knob1Val();
+  case 1: return knob2Val();
+  case 2: return knob3Val();
+  case 3: return knob4Val();
+  case 4: return sliderAVal();
+  case 5: return sliderBVal();
+  case 6: return joystickXVal();
+  case 7: return joystickYVal();
+  case 8: return joystickButtonVal();
+  case 9: return playButtonState;
+  default: break;
+  }
+}
 
 bool sliderAResetTrigger(void)                                          // Returns true if user is hella wiggling Slider A
 {
