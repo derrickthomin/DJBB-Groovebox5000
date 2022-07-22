@@ -4,19 +4,19 @@
 #include "Display.h"
 #include "Audiostuff.h"
 
-#define NUM_STEP_BUTTONS  16
-#define NUM_TWISTPOTS     4
-#define NUM_SLIDEPOTS     2
+#define NUM_STEP_BUTTONS     16
+#define NUM_TWISTPOTS        4
+#define NUM_SLIDEPOTS        2
 
-#define MUX_CONTROL_S0    2
-#define MUX_CONTROL_S1    3
-#define MUX_CONTROL_S2    4
-#define MUX_1_DATA_PIN    5               // DIGITAL - 1st 8 sequence buttons
-#define MUX_2_DATA_PIN    6               // DIGITAL - 2nd 8 sequence buttons
-#define MUX_3_DATA_PIN    16              // ANALOG  - Handles twist pots + joystick + joystick click
-#define SLIDEPOT_LEFT_PIN 25              // Left of the 2 slide pots
-#define SLIDEPOT_RIGHT_PIN 24
-#define PLAYBUTTON_PIN     31             // Mushy little buton 
+#define MUX_CONTROL_S0       2
+#define MUX_CONTROL_S1       3
+#define MUX_CONTROL_S2       4
+#define MUX_1_DATA_PIN       5               // DIGITAL - 1st 8 sequence buttons
+#define MUX_2_DATA_PIN       6               // DIGITAL - 2nd 8 sequence buttons
+#define MUX_3_DATA_PIN       16              // ANALOG  - Handles twist pots + joystick + joystick click
+#define SLIDEPOT_LEFT_PIN    25              // Left of the 2 slide pots
+#define SLIDEPOT_RIGHT_PIN   24
+#define PLAYBUTTON_PIN       31             // Mushy little buton 
 
 // ********** SET TO TRUE TO PRINT TEST STUFF **************
 
@@ -52,7 +52,7 @@ uint16_t joystickGuiLastY;
 // Play button
 bool     playButtoNow, playButtonState, playButtonQuickpress, 
          playButtonDoublePress, playButtonPrev, playButtonStatePrev = false;
-uint32_t  playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
+uint32_t playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
 
 elapsedMillis playButtonOntime = 0;
 
@@ -195,55 +195,55 @@ void processInputs(Sequencer& seq)
       seqButtonHeld = true;
       drawInfoBar("Editing Step: ", i);
 
+      // Button held and Pot/Knob 1 Changed (input idx: 0)
+      if (knob1Changed()){
+        int8_t input_idx = 0;
+        update_pot_display_val_IDX(input_idx);
+        update_input_label_IDX_step(input_idx);
+        run_input_change_function_step(seq, input_idx, i);
+      }
+
+      // Button held and Pot/Knob 2 Changed (input idx: 1)
+      if (knob2Changed()){
+        uint8_t input_idx = 1;
+        update_pot_display_val_IDX(input_idx);
+        update_input_label_IDX_step(input_idx);
+        run_input_change_function_step(seq, input_idx, i);
+      }
+
+      // Button held and Pot/Knob 3 Changed (input idx: 2)
+      if (knob3Changed()){
+        uint8_t input_idx = 2;
+        update_pot_display_val_IDX(input_idx);
+        update_input_label_IDX_step(input_idx);
+        run_input_change_function_step(seq, input_idx, i);
+      }
+      
+      // Button held and Pot/Knob 4 Changed (input idx: 3)
+      if (knob4Changed()){
+        uint8_t input_idx = 3;
+
+        update_pot_display_val_IDX(input_idx);
+
+        update_pot_4_label_global();
+        update_input_label_IDX_step(input_idx);
+        run_input_change_function_step(seq, input_idx, i);
+      }
+
       // Button held and Slider A Changed (input idx: 4)
       if (sliderAChanged()){
-        int8_t input_idx = 4;
-        seq.setSwingAtIndex(i, sliderAVal());
+        uint8_t input_idx = 4;
         update_slider_label_IDX(1, "rel");
         update_slider_display_val_IDX(input_idx);
+        run_input_change_function_step(seq, input_idx, i);
       }
  
       // Button held and Slider B Changed (input idx: 5)
       if (sliderBChanged()){
-        int8_t input_idx = 5;
-        Serial.println("slider b changed");
-        uint16_t  envelopeVal = ((sliderBVal()+1) * 10);
-        seq.setStepDecayAtIndex(i, envelopeVal);
+        uint8_t input_idx = 5;
         update_slider_label_IDX(2, "swng");
         update_slider_display_val_IDX(input_idx);
-      }
-
-      // Button held and Pot/Knob 1 Changed (input idx: 1)
-      if (knob1Changed()){
-        int8_t input_idx = 0;
-        update_pot_display_val_IDX(input_idx);
-        //update_pot_1_label_global();
-      }
-
-      // Button held and Pot/Knob 2 Changed (input idx: 2)
-      if (knob2Changed()){
-        int8_t input_idx = 1;
-        seq.setStepAttackAtIndex(i, knob2Val());
-        update_pot_display_val_IDX(input_idx);
-        update_pot_2_label_global();
-        //run_input_change_function_step(potnum, i);
-      }
-
-      // Button held and Pot/Knob 3 Changed (input idx: 3)
-      if (knob3Changed()){
-        int8_t input_idx = 2;
-        seq.setDrumFreqAtIndex(i, knob3Val());
-        update_pot_display_val_IDX(input_idx);
-        update_pot_3_label_global();
-      }
-      
-      // Button held and Pot/Knob 4 Changed (input idx: 4)
-      if (knob4Changed()){
-        int8_t input_idx = 3;
-        float newpMod = map(knob4Val(), 0, 100, 0.3f, 0.7f);
-        seq.setDrumPModAtIndex(i, newpMod);
-        update_pot_display_val_IDX(input_idx);
-        update_pot_4_label_global();
+        run_input_change_function_step(seq, input_idx, i);
       }
     }
   }
@@ -359,31 +359,31 @@ void selectMuxPin(uint8_t pin)          // Switch all mux inputs
 }
 
 // Knobs
-bool     knob1Changed(void){return knobAndJoystickNewPress[0];}         // Returns true if twist pot 1 changed, false otherwise
-bool     knob2Changed(void){return knobAndJoystickNewPress[1];}         // Returns true if twist pot 2 changed, false otherwise
-bool     knob3Changed(void){return knobAndJoystickNewPress[2];}         // Returns true if twist pot 3 changed, false otherwise
-bool     knob4Changed(void){return knobAndJoystickNewPress[4];}         // Returns true if twist pot 4 changed, false otherwise
-uint8_t  knob1Val(void){return knobAndJoystickNow[0];}                  // Returns Current value of Knob 1
-uint8_t  knob2Val(void){return knobAndJoystickNow[1];}                  // Returns Current value of Knob 2
-uint8_t  knob3Val(void){return knobAndJoystickNow[2];}                  // Returns Current value of Knob 3
-uint8_t  knob4Val(void){return knobAndJoystickNow[4];}                  // Returns Current value of Knob 4
+bool     knob1Changed          (void){return knobAndJoystickNewPress[0];}         // Returns true if twist pot 1 changed, false otherwise
+bool     knob2Changed          (void){return knobAndJoystickNewPress[1];}         // Returns true if twist pot 2 changed, false otherwise
+bool     knob3Changed          (void){return knobAndJoystickNewPress[2];}         // Returns true if twist pot 3 changed, false otherwise
+bool     knob4Changed          (void){return knobAndJoystickNewPress[4];}         // Returns true if twist pot 4 changed, false otherwise
+uint8_t  knob1Val              (void){return knobAndJoystickNow[0];}                  // Returns Current value of Knob 1
+uint8_t  knob2Val              (void){return knobAndJoystickNow[1];}                  // Returns Current value of Knob 2
+uint8_t  knob3Val              (void){return knobAndJoystickNow[2];}                  // Returns Current value of Knob 3
+uint8_t  knob4Val              (void){return knobAndJoystickNow[4];}                  // Returns Current value of Knob 4
 
 // Joystick inputs
-bool     joystickYChanged(void){return knobAndJoystickNewPress[7];}     // Returns true if Y value of joystick changed
-bool     joystickXChanged(void){return knobAndJoystickNewPress[5];}     // Returns true if X value of joystick changed
+bool     joystickYChanged     (void){return knobAndJoystickNewPress[7];}     // Returns true if Y value of joystick changed
+bool     joystickXChanged     (void){return knobAndJoystickNewPress[5];}     // Returns true if X value of joystick changed
 bool     joystickButtonChanged(void){return knobAndJoystickNewPress[6];}  
 
-uint8_t  joystickYVal(void){return knobAndJoystickNow[7];}              // Returns Current val of Joystick Y
-uint8_t  joystickXVal(void){return knobAndJoystickNow[5];}              // Returns Current val of Joystick X
-uint8_t  joystickButtonVal(void){return knobAndJoystickNow[6];} 
-uint8_t  joystickXValPrev(void){return knobAndJoystickPrev[7];}
-uint8_t  joystickYValPrev(void){return knobAndJoystickPrev[5];}
+uint8_t  joystickYVal         (void){return knobAndJoystickNow[7];}              // Returns Current val of Joystick Y
+uint8_t  joystickXVal         (void){return knobAndJoystickNow[5];}              // Returns Current val of Joystick X
+uint8_t  joystickButtonVal    (void){return knobAndJoystickNow[6];} 
+uint8_t  joystickXValPrev     (void){return knobAndJoystickPrev[7];}
+uint8_t  joystickYValPrev     (void){return knobAndJoystickPrev[5];}
 
 // Slider inputs
-bool     sliderAChanged(void){return sliderPotsNewPress[0];}            // Returns true if slider A changed
-bool     sliderBChanged(void){return sliderPotsNewPress[1];}            // Returns true if slider B changed
-uint8_t  sliderAVal(void){return sliderPotsNow[0];}                     // Returns current val of Slider A
-uint8_t  sliderBVal(void){return sliderPotsNow[1];}                     // Returns current val of Slider B
+bool     sliderAChanged       (void){return sliderPotsNewPress[0];}            // Returns true if slider A changed
+bool     sliderBChanged       (void){return sliderPotsNewPress[1];}            // Returns true if slider B changed
+uint8_t  sliderAVal           (void){return sliderPotsNow[0];}                     // Returns current val of Slider A
+uint8_t  sliderBVal           (void){return sliderPotsNow[1];}                     // Returns current val of Slider B
 
 /*
                                    Input IDX Info:

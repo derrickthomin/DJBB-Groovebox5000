@@ -18,12 +18,12 @@ extern Adafruit_NeoPixel strip;
 #define DEFAULT_DRUM_LENGTH    100
 #define DEFAULT_DRUM_MIX2      0 
 // Drum
-#define MIN_DRUM_FREQUENCY      25
-#define MAX_DRUM_FREQUENCY      800
+#define MIN_DRUM_FREQUENCY     25
+#define MAX_DRUM_FREQUENCY     800
 #define MIN_DRUM_LEN           1      //ms
-#define MAX_DRUM_LEN           500    //ms
-#define MIN_DRUM_PMOD          0.3
-#define MAX_DRUM_PMOD          0.7   
+#define MAX_DRUM_LEN           1000    //ms
+#define MIN_DRUM_PMOD          0.1
+#define MAX_DRUM_PMOD          0.9   
 #define MIN_DRUM_MIX2          0
 #define MAX_DRUM_MIX2          0.5   // IDK what the units even are. needt to test   
 // Filter / FX
@@ -38,7 +38,7 @@ extern Adafruit_NeoPixel strip;
 #define MIN_RATCHET            0
 #define MAX_RATCHET            4
 // ASDR / Basic
-#define MIN_VOICE_VOL          0
+#define MIN_VOICE_VOL          0.1   // Don't want to go all the way to 0... should just turn the step off at that point
 #define MAX_VOICE_VOL          0.6
 #define MIN_ATTACK             0
 #define MAX_ATTACK             500   
@@ -84,8 +84,8 @@ class Step {
     public:
         Step(uint8_t colorSetIDX);
 
-        void playNote(void);          // Play note from the current voice
-        void assignVoice(Voice* vOice){voice = vOice;}
+        void     playNote(void);          // Play note from the current voice
+        void     assignVoice(Voice* vOice){voice = vOice;}
 
         // -------- Getters --------//
         uint16_t getStepAttack(void);
@@ -198,33 +198,33 @@ class Sequencer {
         void setNextStepPlayedState(bool state){steps[getNextStepNumber()].setPlayingState(state);}
         
         // -------> Index Funcions
-        void stepOnAtIDX(uint8_t idx);
-        void stepOffAtIDX(uint8_t idx);
-        void stepFlipStateAtIndex(uint8_t idx);
-        void setSwingAtIndex(uint8_t idx, int8_t swing);          // Pass a positive or negative value, from - 50 to 50
-        void setPlayStateAtIndex(uint8_t idx, bool playstate);
-        void setStepAttackAtIndex(uint8_t idx, uint16_t attack);
-        void setStepReleaseAtIndex(uint8_t idx, uint16_t release);
-        void setStepDecayAtIndex(uint8_t idx, uint16_t decay);
-        void setStepSustainAtIndex(uint8_t idx, uint16_t sustain);
-        void setStepVolumeAtIndex(uint8_t idx, uint16_t vol);
-        void setStepSwingMillisAtIndex(uint8_t idx, int16_t swingMillis);           // Number of millis to add or subtract for step... for swing
-        void setStepRatchetCountAtIndex(uint8_t idx, uint8_t count);
-        void setStepColorAtIndex(uint8_t idx, uint16_t color);
+        void stepOnAtIDX                 (uint8_t idx);
+        void stepOffAtIDX                (uint8_t idx);
+        void stepFlipStateAtIndex        (uint8_t idx);
+        void setPlayStateAtIndex         (uint8_t idx, bool playstate);
+        void setSwingAtIndex             (uint8_t idx, uint8_t swing);          // Pass a positive or negative value, from - 50 to 50
+        void setStepAttackAtIndex        (uint8_t idx, uint8_t attack);
+        void setStepReleaseAtIndex       (uint8_t idx, uint8_t release);
+        void setStepDecayAtIndex         (uint8_t idx, uint8_t decay);
+        void setStepSustainAtIndex       (uint8_t idx, uint8_t sustain);
+        void setStepVolumeAtIndex        (uint8_t idx, uint8_t vol);
+        void setStepSwingMillisAtIndex   (uint8_t idx, uint8_t swingMillis);           // Number of millis to add or subtract for step... for swing
+        void setStepRatchetCountAtIndex  (uint8_t idx, uint8_t count);
+        void setStepColorAtIndex         (uint8_t idx, uint16_t color);
         
         // djt - flesh me out
 
         // Bitcrush
-        void setStepBitcrushDepthAtIndex(uint8_t idx, uint8_t depth);
-        void setStepBitcurshRateAtIndex(uint8_t idx, uint16_t freq);
+        void setStepBitcrushDepthAtIndex (uint8_t idx, uint8_t depth);
+        void setStepBitcurshRateAtIndex  (uint8_t idx, uint8_t freq);
         // Filter
-        void setStepFiltFreqAtIndex(uint8_t idx, uint16_t freq);
-        void setStepFilterQAtIndex(uint8_t idx, float q);
+        void setStepFiltFreqAtIndex      (uint8_t idx, uint8_t freq);
+        void setStepFilterQAtIndex       (uint8_t idx, uint8_t q);
         // Drum stuffs
-        void setDrumPModAtIndex(uint8_t idx, float pmod);
-        void setDrumLengthAtIndex(uint8_t idx, uint16_t len);
-        void setDrumMix2AtIndex(uint8_t idx, float mix2);
-        void setDrumFreqAtIndex(uint8_t idx, uint16_t freq);
+        void setDrumPModAtIndex          (uint8_t idx, uint8_t pmod);
+        void setDrumLengthAtIndex        (uint8_t idx, uint8_t len);
+        void setDrumMix2AtIndex          (uint8_t idx, uint8_t mix2);
+        void setDrumFreqAtIndex          (uint8_t idx, uint8_t freq);
 
         // --------- Other --------- //
         void debugPrintSeqData(String message, bool extraSpace = false, bool detailed = true);
@@ -232,6 +232,23 @@ class Sequencer {
 };
 
 // ---- Callback functions for input handling ----- //
+void cb_set_attack                         (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_release                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_decay                          (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_sustain                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_volume                         (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_ratchet                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_playstate                      (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_color                          (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_bitcrushDepth                  (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_bitcrushRate                   (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_filterFreq                     (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_filterQ                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_drumPMod                       (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_drumLen                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_drumMix2                       (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_drumFreq                       (Sequencer& seq, uint8_t step_idx, uint8_t val);
+void cb_set_swing                          (Sequencer& seq, uint8_t step_idx, uint8_t val);
 
 // Setters
  void setCurrSeqSwingAtIndex(uint8_t step_idx, uint8_t pot_idx);         // Pass a positive or negative value, from - 50 to 50

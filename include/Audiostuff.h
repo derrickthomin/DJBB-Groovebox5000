@@ -4,16 +4,6 @@
 #include "Common.h"
 
 #define STARTUP_NUM_VOICES 4    // How many voices to created
-// #define DEFAULT_FILT_FREQ 17000
-// #define DEFAULT_FILT_Q    0.7
-// #define DEFAULT_CRUSH_BITDEPTH  16
-// #define DEFAULT_CRUSH_FREQ     44100
-// #define DEFAULT_NOISE_LVL      0.5
-// #define DEFAULT_DRUM_FREQ      300
-// #define DEFAULT_DRUM_PMOD      0.6
-// #define DEFAULT_DRUM_LENGTH    100
-// #define DEFAULT_DRUM_MIX2      0 
-
 
 class Voice
 {
@@ -33,6 +23,7 @@ class Voice
         AudioSynthNoisePink*       noise;
         AudioSynthSimpleDrum*      drum;
         AudioPlaySdWav *           samplePlayer;     // Only populated if this voice is a sample player
+        AudioAmplifier *           amplifier;
 
         // Envelope / core
         uint16_t attack;                   // Current voice attack. If steps have param locks, they will be constantly updating this for their voice before playing.
@@ -61,7 +52,7 @@ class Voice
         Voice(AudioSynthNoisePink* noise, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r, 
               AudioFilterStateVariable* filt_l, AudioFilterStateVariable* filt_r, 
               AudioEffectBitcrusher* bitcr_l, AudioEffectBitcrusher* bitcr_r);
-        Voice(AudioSynthSimpleDrum* drm, AudioEffectEnvelope* env);
+        Voice(AudioSynthSimpleDrum* drm, AudioEffectEnvelope* env, AudioAmplifier* amp);
 
         static uint8_t numVoices;                                                  // Track how many voices we have created altogether.
         static std::vector<Voice*> allVoices;                                      // Pointers to all voices. Voices get added automatically when created. DJT - may need to deal with deleting in the future.. but for now whatev

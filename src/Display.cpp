@@ -16,39 +16,15 @@
 
 Adafruit_SSD1351 oled = Adafruit_SSD1351(CS_PIN, DC_PIN, RST_PIN);  
 
-const std::vector<std::vector<uint16_t>> colors{reds, blues, greens, pinks, yellows, oranges, purples};  // All colors
-const std::vector<std::vector<uint32_t>> all_colors_neopix {reds_neopix, blues_neopix, greens_neopix, pinks_neopix, yellows_neopix, oranges_neopix, purples_neopix};
-bool infoBarActive = false; 
-char * prevInfoText;
-int16_t prevInfoVal;
-uint32_t lastInfobarMillis = millis();          // when did we last show a new info bar
-const uint16_t infoBarDispTime = 700;           // How many millis until the banner goes awasy
-int16_t currentScreenIDX = 0;
-Screen* currentScreen;                          // Pointer to the current screen
-/*
-***************************   Menus   **********************************
-
-                    Each represents a "screen". 
-
-            Each should include:
-                - A total refresh (draw the whole thing
-
-************************************************************************
-*/
-
-Screen::Screen(char* Title, uint16_t TitleColor)
-{
-    title = Title;
-    titleColor = TitleColor;
-}
-
-// functions
-void Screen::drawTitleBarMnu(void)                    // Draws the top title bar
-{
-    drawTitleBar(title, titleColor);
-}
-std::vector<Screen> screens;
-
+const           std::vector<std::vector<uint16_t>> colors{reds, blues, greens, pinks, yellows, oranges, purples};  // All colors
+const           std::vector<std::vector<uint32_t>> all_colors_neopix {reds_neopix, blues_neopix, greens_neopix, pinks_neopix, yellows_neopix, oranges_neopix, purples_neopix};
+bool            infoBarActive = false; 
+char *          prevInfoText;
+int16_t         prevInfoVal;
+uint32_t        lastInfobarMillis = millis();          // when did we last show a new info bar
+const uint16_t  infoBarDispTime = 700;           // How many millis until the banner goes awasy
+int16_t         currentScreenIDX = 0;
+Screen*         currentScreen;                          // Pointer to the current screen
 /*
 *************************** Helper variables **************************
 
@@ -56,10 +32,10 @@ std::vector<Screen> screens;
 
 ************************************************************************
 */
-const uint8_t screen_middle = SCREEN_HEIGHT/2; 
-const uint8_t screen_qtr_2_x = SCREEN_HEIGHT/4;
-const uint8_t screen_qtr_3_x = screen_qtr_2_x * 2;
-const uint8_t screen_qtr_4_x = screen_qtr_2_x * 3;
+const uint8_t screen_middle     = SCREEN_HEIGHT/2; 
+const uint8_t screen_qtr_2_x    = SCREEN_HEIGHT/4;
+const uint8_t screen_qtr_3_x    = screen_qtr_2_x * 2;
+const uint8_t screen_qtr_4_x    = screen_qtr_2_x * 3;
 const uint8_t screen_bot_info_y = 95;                 // Below here we can show pot values, etc.
 const uint8_t infoBarHeight     = 17;
 const uint8_t infobarY          = infoBarHeight - 1;
@@ -71,36 +47,34 @@ const uint8_t mnu_title_left_pad = 5;
 const uint8_t mnu_title_colorblock_width = 15;
 
 // Pot Stuff
-const uint8_t pot_x_st       = 5;  // First pot position
-const uint8_t pot_line_width = (SCREEN_WIDTH / 6);
-const uint8_t pot_dot_radius = 3;
-const uint8_t pot_line_y     = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
-const uint8_t pot_val_y      = pot_line_y + pot_dot_radius + 10;
-const uint8_t pot_label_y    = 98;
-const uint8_t pot_label_ht   = 8;
+const uint8_t pot_x_st          = 5;  // First pot position
+const uint8_t pot_line_width    = (SCREEN_WIDTH / 6);
+const uint8_t pot_dot_radius    = 3;
+const uint8_t pot_line_y        = screen_bot_info_y + (SCREEN_HEIGHT - screen_bot_info_y)/2;
+const uint8_t pot_val_y         = pot_line_y + pot_dot_radius + 10;
+const uint8_t pot_label_y       = 98;
+const uint8_t pot_label_ht      = 8;
   
 // Slider stuff
-const uint16_t sliderWidth = 13;    // in pixels - How wide the slider is
-const uint16_t sliderHeight= 60;    // in pixels - How tall the slider is
-const uint8_t  sliderSpacing = 15;
-const uint8_t  sliderThinWidth = 3;
-const uint8_t  sliderThinHeight = 30;
-const uint8_t  slider_val_label_y = SCREEN_HEIGHT - sliderThinHeight - 10;
-const uint8_t  slider_label_x1    = 30;
-const uint8_t  slider_label_x2    = SCREEN_WIDTH/2;
+const uint16_t sliderWidth           = 13;    // in pixels - How wide the slider is
+const uint16_t sliderHeight          = 60;    // in pixels - How tall the slider is
+const uint8_t  sliderSpacing         = 15;
+const uint8_t  sliderThinWidth       = 3;
+const uint8_t  sliderThinHeight      = 30;
+const uint8_t  slider_val_label_y    = SCREEN_HEIGHT - sliderThinHeight - 10;
+const uint8_t  slider_label_x1       = 30;
+const uint8_t  slider_label_x2       = SCREEN_WIDTH/2;
 const uint8_t  slider_labelbar_width = (SCREEN_WIDTH - (2*slider_label_x1))/2;
 
 // DJT - not used yet..
 const uint8_t  text_height = 6;
-
 // Title Bar
-const uint8_t  title_bar_y_start = 0;
-const uint8_t  title_bar_y_end   = 20;
-const uint8_t  title_bar_x_start = 0;
-const uint8_t  title_bar_x_end   = SCREEN_WIDTH;
-const uint8_t  title_bar_width  = title_bar_x_end - title_bar_x_start;
-const uint8_t  title_bar_height  = title_bar_y_end - title_bar_y_start;
-
+const uint8_t  title_bar_y_start  = 0;
+const uint8_t  title_bar_y_end    = 20;
+const uint8_t  title_bar_x_start  = 0;
+const uint8_t  title_bar_x_end    = SCREEN_WIDTH;
+const uint8_t  title_bar_width    = title_bar_x_end - title_bar_x_start;
+const uint8_t  title_bar_height   = title_bar_y_end - title_bar_y_start;
 // Action Zone 
 const uint8_t  action_zone_y_start = title_bar_y_end;
 const uint8_t  action_zone_y_end   = 90;
@@ -108,15 +82,13 @@ const uint8_t  action_zone_x_start = 0;
 const uint8_t  action_zone_x_end   = SCREEN_WIDTH;
 const uint8_t  action_zone_width   = action_zone_x_end - action_zone_x_start;
 const uint8_t  action_zone_height  = action_zone_y_end - action_zone_y_start;
-
-// Info Zone
+// Info one
 const uint8_t  info_zone_y_start = action_zone_y_end + 1;
 const uint8_t  info_zone_y_end   = 128;
 const uint8_t  info_zone_x_start = 0;
 const uint8_t  info_zone_x_end   = SCREEN_WIDTH;
 const uint8_t  info_zone_width   = info_zone_x_end - info_zone_x_start;
 const uint8_t  info_zone_height  = info_zone_y_end - info_zone_y_start;
-
 // sliders
 const uint8_t  slider_label_zone_height        = 8;
 const uint8_t  slider_label_zone_y_start       = info_zone_y_start;
@@ -129,7 +101,6 @@ const uint8_t  slider_val_y_start              = slider_label_zone_y_end + 5;
 const uint8_t  slider_val_y_end                = SCREEN_HEIGHT;
 const uint8_t  slider_val_x_left               = 0;
 const uint8_t  slider_val_x_right              = SCREEN_WIDTH - slider_val_width;
-
 // Pots
 const uint8_t  info_pot_x_start    = 6;
 const uint8_t  info_pot_y_start    = slider_label_zone_y_end + 1; 
@@ -154,45 +125,57 @@ const uint8_t  info_pot3_line_x_start   = info_pot3_x_start + info_pot_dot_radiu
 const uint8_t  info_pot4_x_start = info_pot3_x_end;
 const uint8_t  info_pot4_x_end   = info_pot4_x_start + info_pot_width - 1;
 const uint8_t  info_pot4_line_x_start   = info_pot4_x_start + info_pot_dot_radius;
-
+std::vector<Screen> screens;
 /*
-*************************** Functions **************************
-****************************************************************
+*************************** Initialization **************************
+*********************************************************************
 */
 
-// Create new screens here.
-void initScreens(void)
-{
-    screens.push_back(Screen("Step Edit", ORANGE_5));
-    screens.push_back(Screen("Screen 2", YELLOW_5));
-    screens.push_back(Screen("Screen 3", PURPLE_5));
+/*                   INITIALIZE SCREENS HERE (in init screens)
 
-    screens[0].initInputBankGlobal(1, "atk","rel","sum","verb","slider","sldd");
-    screens[0].initInputBankStep  (1, "atk","rel","sum","verb","slider","sldd");
-    screens[0].setPrevInputBankGlobal();   // Acts kind of like an initializer.. current bank members not set before this
-    screens[0].setPrevInputBankStep();
+        Step 1: Add to the screens vector by pushing back new Screen objects
+        Step 2: Initialize the input banks
+                - Global = what to call the inputs when no seq button is being pressed
+                - Step   = what to call the inputs when the sequencer button is pressed
+        Step 3: Initialize the input callback functions
+                - Same deal as above... different ones for global vs step based since
+                  you likely want to do somehting different for each.
+                - You can use VOIDCALLBACK as a placeholder if you don't want to assign a func to an input.
 
-    // We are saying - when these pots change while a sequence button is NOT pressed, run the passed in function
-    // - - Functions need to have 1 parameter - an INT representing the sequencer step
-    // Note - can use VOIDCALLBACK if no action is needed.
-    screens[0].initInputFunctionsGlobal(1, setHeadphoneVolume, VOIDCALLBACK,   // DJT TESTING 
-                                        z_callback_tester1, z_callback_tester2,
-                                        z_callback_tester1, z_callback_tester2);
-
-    // Same as above, but only run if a step button is presssed.                                   
-    screens[0].initInputFunctionsStep(1, z_callback_tester1, VOIDCALLBACK,     // DJT TESTING 
-                                    z_callback_tester1, z_callback_tester2,
-                                    z_callback_tester1, z_callback_tester2);
-
-    currentScreen = &screens[currentScreenIDX];
-}
-
+*/
 void initOled(void)
 {
     oled.begin(16000000);
     oled.fillScreen(BLACK);
     oled.setRotation(2);
     drawCurrentTitleBar();
+}
+
+void initScreens(void)
+{
+    // Screen # 1
+    screens.push_back(Screen("Step Edit", ORANGE_5));
+
+    screens[0].addInputFunctionBankGlobal (setHeadphoneVolume, z_callback_tester2, VOIDCALLBACK, VOIDCALLBACK, VOIDCALLBACK, VOIDCALLBACK);
+    screens[0].addInputLabelBankGlobal    ("atk", "rel", "-","-","-","-");
+
+    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_drumLen, cb_set_swing, cb_set_drumMix2, cb_set_drumFreq, cb_set_drumPMod);
+    screens[0].addInputLabelBankStep      ("vol", "len","swng","2x","freq","p-mod");
+
+    screens[0].changeBankGlobal           (-1);   // Acts kind of like an initializer.. current bank members not set before this
+    screens[0].changeBankStep             (-1);
+
+    // Screen #2
+    screens.push_back(Screen("Screen 2", YELLOW_5));
+    // add input inits later
+    //
+    //
+    // Screen #3
+    screens.push_back(Screen("Screen 3", PURPLE_5));
+    // add input inits later 
+    //
+    //
+    currentScreen = &screens[currentScreenIDX];
 }
 
 void drawCurrentTitleBar(void)
@@ -311,52 +294,53 @@ void update_slider_display_val_IDX(uint8_t idx)
 
 void update_pot_1_label_global(void)
 {
-    update_pot_label_IDX(1,currentScreen->inputBankGlobal_current[0]);
+    update_input_label_IDX_global(1);
 }
 
 void update_pot_2_label_global(void)
 {
-    update_pot_label_IDX(2,currentScreen->inputBankGlobal_current[1]);
+    update_input_label_IDX_global(2);
 }
 
 void update_pot_3_label_global(void)
 {
-    update_pot_label_IDX(3,currentScreen->inputBankGlobal_current[2]);
+    update_input_label_IDX_global(3);
 }
 
 void update_pot_4_label_global(void)
 {
-    update_pot_label_IDX(4,currentScreen->inputBankGlobal_current[3]);
+    update_input_label_IDX_global(4);
 }
 
 void update_slider_1_label_global(void)
 {
-    update_slider_label_IDX(1,currentScreen->inputBankGlobal_current[4]);
+    // update_slider_label_IDX(1);
 }
 
 void update_slider_2_label_global(void)
 {
-    update_slider_label_IDX(2,currentScreen->inputBankGlobal_current[5]);
+    // update_slider_label_IDX(2);
 }
 
-void update_pot_label_IDX(uint8_t idx, char* label)
+void update_input_label_IDX_step(uint8_t idx)
 {
     uint8_t x = 0;
     uint8_t y =  info_pot_label_y - text_height;
     uint16_t color = yellows[idx];
+    char* label = currentScreen->inputLabelBankStep_current[idx];
 
     switch (idx)
     {
-    case 1:
+    case 0:
         x = info_pot1_x_start;
         break;
-    case 2:
+    case 1:
          x = info_pot2_x_start;
         break;
-    case 3:
+    case 2:
         x = info_pot3_x_start;
         break;
-    case 4:
+    case 3:
         x = info_pot4_x_start;
         break;
 
@@ -367,6 +351,37 @@ void update_pot_label_IDX(uint8_t idx, char* label)
     oled.setCursor(x+2, y);
     oled.setTextColor(color);
     oled.println(label);
+    //oled.drawRect(x, y, info_pot_width, text_height, BLUE_2);
+}
+void update_input_label_IDX_global(uint8_t idx)
+{
+    // uint8_t x = 0;
+    // uint8_t y =  info_pot_label_y - text_height;
+    // uint16_t color = yellows[idx];
+    // char* label = currentScreen->inputLabelBankStep_current[idx];
+
+    // switch (idx)
+    // {
+    // case 1:
+    //     x = info_pot1_x_start;
+    //     break;
+    // case 2:
+    //      x = info_pot2_x_start;
+    //     break;
+    // case 3:
+    //     x = info_pot3_x_start;
+    //     break;
+    // case 4:
+    //     x = info_pot4_x_start;
+    //     break;
+
+    // default:
+    //     break;
+    // }
+    // oled.fillRect(x, y, info_pot_width, text_height + 2, BLACK);
+    // oled.setCursor(x+2, y);
+    // oled.setTextColor(color);
+    // oled.println(label);
     //oled.drawRect(x, y, info_pot_width, text_height, BLUE_2);
 }
 
@@ -407,224 +422,109 @@ void prevScreen(void)
     if (currentScreenIDX < 0) currentScreenIDX = screens.size() - 1;
     currentScreen = &screens[currentScreenIDX];
 }
+/*
+***************************   SCREEN   **********************************
 
-void Screen::setNextInputBankGlobal(void)
+                     Each represents a "screen". 
+
+************************************************************************
+*/
+
+Screen::Screen(char* Title, uint16_t TitleColor)
 {
-    inputBankGlobal_IDX++;
-    if (inputBankGlobal_IDX > 2) inputBankGlobal_IDX = 2;
-    switch (inputBankGlobal_IDX){
-    case 0:
-        inputBankGlobal_current = inputBankGlobal_1;
-        break;
-    case 1:
-        inputBankGlobal_current = inputBankGlobal_2;
-        break;
-    case 2:
-        inputBankGlobal_current = inputBankGlobal_3;
-        break;
-    default:
-        inputBankGlobal_current = inputBankGlobal_1;
-        break;
-    }
+    title = Title;
+    titleColor = TitleColor;
+    // inputLabelBanksGlobal = {};
+    // std::vector<std::vector<char*>>    inputLabelBanksStep;      
+    // std::vector<std::vector<callback>> inputCallbackBanksGlobal;
+    // std::vector<std::vector<callback>> inputCallbackBanksStep;
 }
 
-void Screen::setPrevInputBankGlobal(void)
+// functions
+void Screen::drawTitleBarMnu(void)                    // Draws the top title bar
 {
-    inputBankGlobal_IDX--;
+    drawTitleBar(title, titleColor);
+}
+
+void Screen::changeBankGlobal(int8_t dir = 1)
+{
+    (dir > 0) ? inputBankGlobal_IDX++ : inputBankGlobal_IDX--;
+    if (inputBankGlobal_IDX > inputLabelBanksGlobal.size()) inputBankGlobal_IDX = inputLabelBanksGlobal.size() - 1;
     if (inputBankGlobal_IDX < 0) inputBankGlobal_IDX = 0;
-    switch (inputBankGlobal_IDX){
-    case 0:
-        if (!(inputBankGlobal_1.size() > 0)) break;    // If nothing is in the bank, don't change
-        inputBankGlobal_current = inputBankGlobal_1;
-        break;
-    case 1:
-        if (!(inputBankGlobal_2.size() > 0)) break;
-        inputBankGlobal_current = inputBankGlobal_2;
-        break;
-    case 2:
-        if (!(inputBankGlobal_2.size() > 0)) break;
-        inputBankGlobal_current = inputBankGlobal_3;
-        break;
-    default:
-        inputBankGlobal_current = inputBankGlobal_1;
-        break;
-    }
-}
 
-void Screen::setNextInputBankStep(void)
-{
-    inputBankStep_IDX++;
-    if (inputBankStep_IDX > 2) inputBankStep_IDX = 2;
-    switch (inputBankStep_IDX){
-    case 0:
-        if (!(inputBankStep_1.size() > 0)) break;
-        inputBankStep_current = inputBankStep_1;
-        break;
-    case 1:
-        if (!(inputBankStep_2.size() > 0)) break;
-        inputBankStep_current = inputBankStep_2;
-        break;
-    case 2:
-        if (!(inputBankStep_3.size() > 0)) break;
-        inputBankStep_current = inputBankStep_3;
-        break;
-    default:
-        inputBankStep_current = inputBankStep_1;
-        break;
-    }
-}
+    // Now set the current banks
+    inputLabelBankGlobal_current = inputLabelBanksGlobal[inputBankGlobal_IDX];
+    inputFunctionBankGlobal_current = inputFuncionBanksGlobal[inputBankGlobal_IDX];
 
-void Screen::setPrevInputBankStep(void)
+    //switch (inputBankGlobal_IDX){
+    // case 0:
+    //     inputBankGlobal_current = inputBankGlobal_1;
+    //     break;
+    // case 1:
+    //     inputBankGlobal_current = inputBankGlobal_2;
+    //     break;
+    // case 2:
+    //     inputBankGlobal_current = inputBankGlobal_3;
+    //     break;
+    // default:
+    //     inputBankGlobal_current = inputBankGlobal_1;
+    //     break;
+    }
+
+void Screen::changeBankStep(int8_t dir = 1)
 {
-    inputBankStep_IDX--;
+    (dir > 0) ? inputBankStep_IDX++ : inputBankStep_IDX--;
+    if (inputBankStep_IDX > inputLabelBanksStep.size()) inputBankStep_IDX = inputLabelBanksStep.size() - 1;
     if (inputBankStep_IDX < 0) inputBankStep_IDX = 0;
-    switch (inputBankStep_IDX){
-    case 0:
-        inputBankStep_current = inputBankStep_1;
-        break;
-    case 1:
-        inputBankStep_current = inputBankStep_1;
-        break;
-    case 2:
-        inputBankStep_current = inputBankStep_1;
-        break;
-    default:
-        inputBankStep_current = inputBankStep_1;
-        break;
-    }
+
+    // Now set the current banks
+    inputLabelBankStep_current = inputLabelBanksStep[inputBankStep_IDX];
+    inputFunctionBankStep_current = inputFunctionBanksStep[inputBankStep_IDX];
 }
 
-void  Screen::initInputBankGlobal(uint8_t bank, char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
+void  Screen::addInputLabelBankGlobal(char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
+                                      char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+{
+    inputLabelBanksGlobal.push_back({knob1, knob2, knob3, knob4, slider1, slider2});
+
+}
+
+void  Screen::addInputLabelBankStep(char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
                                     char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
 {
-    if (bank < 1) bank = 1;
-    if (bank > 3) bank = 3;
-    std::vector<char*>* curbank;
-
-    switch (bank){
-    case 1:
-        curbank = &inputBankGlobal_1;
-        break;
-    case 2:
-        curbank = &inputBankGlobal_2;
-        break;
-    case 3:
-        curbank = &inputBankGlobal_3;
-        break;
-    default:
-        break;
-    }
-    curbank -> push_back(knob1);
-    curbank -> push_back(knob2);
-    curbank -> push_back(knob3);
-    curbank -> push_back(knob4);
-    curbank -> push_back(slider1);
-    curbank -> push_back(slider2);
+    inputLabelBanksStep.push_back({knob1, knob2, knob3, knob4, slider1, slider2});
 }
 
-void  Screen::initInputBankStep(uint8_t bank, char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
-                                    char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+void Screen::addInputFunctionBankGlobal(callback knob1_func = VOIDCALLBACK, callback knob2_func = VOIDCALLBACK, 
+                                        callback knob3_func = VOIDCALLBACK, callback knob4_func = VOIDCALLBACK, 
+                                        callback slider1_func = VOIDCALLBACK, callback slider2_func = VOIDCALLBACK)
 {
-    if (bank < 1) bank = 1;
-    if (bank > 3) bank = 3;
-    std::vector<char*>* curbank;
-
-    switch (bank){
-    case 1:
-        curbank = &inputBankStep_1;
-        break;
-    case 2:
-        curbank = &inputBankStep_2;
-        break;
-    case 3:
-        curbank = &inputBankStep_3;
-        break;
-    default:
-        break;
-    }
-    curbank -> push_back(knob1);
-    curbank -> push_back(knob2);
-    curbank -> push_back(knob3);
-    curbank -> push_back(knob4);
-    curbank -> push_back(slider1);
-    curbank -> push_back(slider2);
+    inputFuncionBanksGlobal.push_back({knob1_func, knob2_func, knob3_func, knob4_func, 
+                                        slider1_func, slider2_func});
 }
 
-void Screen::initInputFunctionsGlobal(uint8_t bank, callback knob1_func, callback knob2_func, 
-                                                callback knob3_func, callback knob4_func, 
-                                                callback slider1_func, callback slider2_func)
+void Screen::addInputFunctionBankStep(callbackStep knob1_func = VOIDCALLBACKSTEP, callbackStep knob2_func = VOIDCALLBACKSTEP, 
+                                     callbackStep knob3_func = VOIDCALLBACKSTEP, callbackStep knob4_func = VOIDCALLBACKSTEP, 
+                                     callbackStep slider1_func = VOIDCALLBACKSTEP, callbackStep slider2_func = VOIDCALLBACKSTEP)
 {
-    if (bank < 1) bank = 1;
-    if (bank > 3) bank = 3;
-    std::vector<callback>* curbank;
-
-    switch (bank){
-    case 1:
-        curbank = &inputFunctionBankGlobal_1;
-        break;
-    case 2:
-        curbank = &inputFunctionBankGlobal_2;
-        break;
-    case 3:
-        curbank = &inputFunctionBankGlobal_3;
-        break;
-    default:
-        break;
-    }
-    curbank -> push_back(knob1_func);
-    curbank -> push_back(knob2_func);
-    curbank -> push_back(knob3_func);
-    curbank -> push_back(knob4_func);
-    curbank -> push_back(slider1_func);
-    curbank -> push_back(slider2_func);
-}
-
-void Screen::initInputFunctionsStep(uint8_t bank, callback knob1_func, callback knob2_func, 
-                                                callback knob3_func, callback knob4_func, 
-                                                callback slider1_func, callback slider2_func)
-{
-    if (bank < 1) bank = 1;
-    if (bank > 3) bank = 3;
-    std::vector<callback>* curbank;
-
-    switch (bank){
-    case 1:
-        curbank = &inputFunctionBankStep_1;
-        break;
-    case 2:
-        curbank = &inputFunctionBankStep_2;
-        break;
-    case 3:
-        curbank = &inputFunctionBankStep_3;
-        break;
-    default:
-        break;
-    }
-    curbank -> push_back(knob1_func);
-    curbank -> push_back(knob2_func);
-    curbank -> push_back(knob3_func);
-    curbank -> push_back(knob4_func);
-    curbank -> push_back(slider1_func);
-    curbank -> push_back(slider2_func);
+    inputFunctionBanksStep.push_back({knob1_func, knob2_func, knob3_func, knob4_func, 
+                                 slider1_func, slider2_func});
 }
 
 void Screen::runInputFunctionGlobal(uint8_t input_idx)  // Given an input index (1 - 6), and the current screen / bank, run a function.
 {
     int16_t val = getInputValueByIDX(input_idx);
-    switch (inputBankGlobal_IDX){
-        case 0:
-            inputFunctionBankGlobal_1[input_idx](val);
-            Serial.println("in case 1");
-            break;
-        case 1:
-            inputFunctionBankGlobal_2[input_idx](val);
-            break;
-        case 2:
-            inputFunctionBankGlobal_3[input_idx](val);
-            break;
-        default:
-            break;
-    }
+    inputFunctionBankGlobal_current[input_idx](val);
+}
+
+void Screen::runInputFunctionStep(Sequencer& seq, uint8_t input_idx, uint8_t stepNumber)
+{
+    uint8_t val = getInputValueByIDX(input_idx);
+    Serial.println("Still working...");
+    Serial.println(val);
+    Serial.println(input_idx);
+    Serial.println(stepNumber);
+    inputFunctionBankStep_current[input_idx](seq, stepNumber, val);
 }
 
 void run_input_change_function_global(uint8_t input_idx)
@@ -632,9 +532,9 @@ void run_input_change_function_global(uint8_t input_idx)
     currentScreen->runInputFunctionGlobal(input_idx);
 }
 
-void run_input_change_function_step(uint8_t input_idx, uint8_t step_number)
+void run_input_change_function_step(Sequencer& seq, uint8_t input_idx, uint8_t stepNumber)
 {
-    currentScreen->runInputFunctionStep(input_idx, step_number);
+    currentScreen->runInputFunctionStep(seq, input_idx, stepNumber);
 }
 
 /*
@@ -679,6 +579,16 @@ void VOIDCALLBACK(int idx=0)
 {
     Serial.println("Void Callback called. No action taken.");
 }
+
+void VOIDCALLBACKSTEP(Sequencer& seq, uint8_t idx, uint8_t step)
+{
+    Serial.println("Void Callback STEP called. No action taken.");
+}
+
+// void VOIDCALLBACK(Sequencer&, uint8_t idx=0, int step_number = 0)
+// {
+//     Serial.println("Void Callback called. No action taken.");
+// }
 
 void z_showAllColors(void)
 {
@@ -728,7 +638,6 @@ void  z_funNoteAnimation(uint8_t xtraX = 0, uint8_t xtraY = 0, uint8_t size = 1)
         prevY = currentY;
         currentX++;
         currentY++;
-
         //drawNoteSymbol(PrevX, prevY, size, BLACK);
         drawNoteSymbol(currentX, currentY, size, colors[colorAryIDX][coloridx]);
         coloridx++;
@@ -738,7 +647,6 @@ void  z_funNoteAnimation(uint8_t xtraX = 0, uint8_t xtraY = 0, uint8_t size = 1)
             colorAryIDX++;
             coloridx = 0;
         }
-
         if (colorAryIDX > colors.size()-1) colorAryIDX = 0;
         delay(200);
 }
@@ -825,4 +733,10 @@ void z_callback_tester2(int idx)
 {
     Serial.println("callback 2 worked??");
         Serial.println(idx);
+}
+
+void z_callback_tester_step(Sequencer& seq, uint8_t step_number, uint8_t val)
+{
+    Serial.println("Step callback worked??????");
+    Serial.println(step_number);
 }

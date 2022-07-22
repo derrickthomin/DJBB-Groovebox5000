@@ -41,7 +41,8 @@
 			"utility": "cpp",
 			"typeinfo": "cpp",
 			"list": "cpp",
-			"iostream": "cpp"
+			"iostream": "cpp",
+			"string": "cpp"
 		}
 	}
 }

@@ -47,7 +47,6 @@ void setup()
   initOled();
   strip.begin();
   strip.setBrightness(NEOPIX_BRIGHTNESS);
-  Serial.println(Voice::allVoices[0]->getAttack());
 
   // //------ SD Card
   Sd2Card card;
