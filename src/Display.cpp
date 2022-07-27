@@ -18,13 +18,13 @@ Adafruit_SSD1351 oled = Adafruit_SSD1351(CS_PIN, DC_PIN, RST_PIN);
 
 const           std::vector<std::vector<uint16_t>> colors{reds, blues, greens, pinks, yellows, oranges, purples};  // All colors
 const           std::vector<std::vector<uint32_t>> all_colors_neopix {reds_neopix, blues_neopix, greens_neopix, pinks_neopix, yellows_neopix, oranges_neopix, purples_neopix};
-bool            infoBarActive = false; 
+bool            inStepContext = false; 
+bool            inStepContextPrev = false;
 char *          prevInfoText;
 int16_t         prevInfoVal;
-uint32_t        lastInfobarMillis = millis();          // when did we last show a new info bar
-const uint16_t  infoBarDispTime = 700;           // How many millis until the banner goes awasy
+uint32_t        lastStepContextMillis = millis();          // when did we last show a new info bar
 int16_t         currentScreenIDX = 0;
-Screen*         currentScreen;                          // Pointer to the current screen
+Screen*         currentScreen;                         // Pointer to the current screen
 /*
 *************************** Helper variables **************************
 
@@ -32,6 +32,7 @@ Screen*         currentScreen;                          // Pointer to the curren
 
 ************************************************************************
 */
+#pragma region
 const uint8_t screen_middle     = SCREEN_HEIGHT/2; 
 const uint8_t screen_qtr_2_x    = SCREEN_HEIGHT/4;
 const uint8_t screen_qtr_3_x    = screen_qtr_2_x * 2;
@@ -125,7 +126,19 @@ const uint8_t  info_pot3_line_x_start   = info_pot3_x_start + info_pot_dot_radiu
 const uint8_t  info_pot4_x_start = info_pot3_x_end;
 const uint8_t  info_pot4_x_end   = info_pot4_x_start + info_pot_width - 1;
 const uint8_t  info_pot4_line_x_start   = info_pot4_x_start + info_pot_dot_radius;
+// Sequencer display related
+const uint8_t seq_disp_y  = 60;
+const uint8_t stepWidth = (SCREEN_WIDTH / 16) - 3;
+const uint8_t stepDispSpacing = 3;
+
+
+
+
+
+#pragma endregion
 std::vector<Screen> screens;
+
+
 /*
 *************************** Initialization **************************
 *********************************************************************
@@ -156,11 +169,14 @@ void initScreens(void)
     // Screen # 1
     screens.push_back(Screen("Step Edit", ORANGE_5));
 
-    screens[0].addInputFunctionBankGlobal (setHeadphoneVolume, z_callback_tester2, VOIDCALLBACK, VOIDCALLBACK, VOIDCALLBACK, VOIDCALLBACK);
-    screens[0].addInputLabelBankGlobal    ("atk", "rel", "-","-","-","-");
+    screens[0].addInputFunctionBankGlobal (setHeadphoneVolume, cb_seq_set_bpm, VOIDCALLBACK, VOIDCALLBACK, VOIDCALLBACK);
+    screens[0].addInputLabelBankGlobal    ("vol", "bpm");
 
-    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_drumLen, cb_set_swing, cb_set_drumMix2, cb_set_drumFreq, cb_set_drumPMod);
-    screens[0].addInputLabelBankStep      ("vol", "len","swng","2x","freq","p-mod");
+    // screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_drumLen, cb_set_swing, cb_set_drumMix2, cb_set_drumFreq, cb_set_drumPMod);
+    // screens[0].addInputLabelBankStep      ("vol", "len","swng","2x","freq","p-mod");
+
+    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_attack, cb_set_decay, cb_set_swing, VOIDCALLBACKSTEP, VOIDCALLBACKSTEP);
+    screens[0].addInputLabelBankStep      ("vol", "atk","rel","swng"," - "," - ");
 
     screens[0].changeBankGlobal           (-1);   // Acts kind of like an initializer.. current bank members not set before this
     screens[0].changeBankStep             (-1);
@@ -183,7 +199,7 @@ void drawCurrentTitleBar(void)
     screens[currentScreenIDX].drawTitleBarMnu();
 }
 
-void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size = 1, int color)
+void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size, int color)
 {
     uint16_t radius = size * 2;
     uint8_t lineX_start = x + radius;
@@ -193,11 +209,11 @@ void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size = 1, int color)
     oled.drawFastVLine(lineX_start, y - line_height, line_height, color);
 }
 
-void drawInfoBar(char * text, int16_t displayVal = -1)
+void drawInfoBar(const char * text, int16_t displayVal)
 {
-    lastInfobarMillis = millis();   // Reset timer... still hodling the button or whatever.
+    lastStepContextMillis = millis();   // Reset timer... still hodling the button or whatever.
 
-    if (prevInfoText == text && prevInfoVal == displayVal && infoBarActive) return;  
+    if (prevInfoText == text && prevInfoVal == displayVal && inStepContext) return;  
 
     eraseInfoBar();
     oled.setTextColor(WHITE);
@@ -207,10 +223,10 @@ void drawInfoBar(char * text, int16_t displayVal = -1)
     prevInfoText = text;
     FUNderline(infobarX, infobarY, infoBarLineWidth, YELLOW_5);
     prevInfoVal = displayVal;
-    infoBarSetStatus(true);
+    inStepContext = true;
 }
 
-void drawTitleBar(char * text, uint16_t color)
+void drawTitleBar(const char * text, uint16_t color)
 {
     uint8_t x = mnu_title_colorblock_width + mnu_title_left_pad;
     eraseInfoBar();
@@ -226,29 +242,38 @@ void eraseInfoBar(void)
     oled.fillRect(0,0, SCREEN_WIDTH, infoBarHeight + 3, BLACK);
 }
 
-void infoBarSetStatus(bool status)
+void checkDisplayContext(void)
 {
-    infoBarActive = status;
+    if (inStepContext && (millis() - lastStepContextMillis > INFOBAR_DISP_TIME))
+    {
+        lastStepContextMillis = millis();
+        drawCurrentTitleBar();
+        update_input_display_ALL_global();
+        inStepContext = false;
+    }
+
+    if (inStepContext && !inStepContextPrev)  // Switched from global to step.. do stuff
+    {
+        // DJT UPDATE ME - call func to update all inpt labels.
+        update_input_display_ALL_step();
+    }
+
+    inStepContextPrev = inStepContext;
 }
 
-// check if info bar needs cleared
-void checkInfoBar(void)
+void refreshInputDisp(void)
 {
-    if (infoBarActive && (millis() - lastInfobarMillis > infoBarDispTime))
-    {
-        lastInfobarMillis = millis();
-        drawCurrentTitleBar();
-        infoBarSetStatus(false);
-    }
+    (inStepContext) ? update_input_display_ALL_step() : update_input_display_ALL_global();
 }
+
 
 // DJT - update this to deal with displaying the number value temporarily.. maybe just in a common zone of the screen? But not important.
-void update_pot_display_val_IDX(uint8_t idx)
+void update_input_disp_dotline(uint8_t idx)
 {
-    uint8_t val = getInputValueByIDX(idx);
-    uint8_t x = 0;
-    uint8_t y =  info_pot_line_y;
-    uint8_t dot_x;
+    uint8_t  val = getInputValueByIDX(idx);
+    uint8_t  x = 0;
+    uint8_t  y =  info_pot_line_y;
+    uint8_t  dot_x;
     uint16_t color = yellows[idx];
 
     switch (idx){
@@ -265,7 +290,7 @@ void update_pot_display_val_IDX(uint8_t idx)
         x = info_pot4_line_x_start;
         break;
     default:
-        break;
+        return;
     }
     dot_x = x + map(val, 0, 100, 0, pot_line_width);
     oled.fillRect(x - pot_dot_radius - 1, y - pot_dot_radius - 1, info_pot_width, pot_dot_radius * 2 + 2, BLACK);
@@ -292,42 +317,20 @@ void update_slider_display_val_IDX(uint8_t idx)
     oled.fillRect(x, y, slider_val_width, SCREEN_HEIGHT - y, color);
 }
 
-void update_pot_1_label_global(void)
-{
-    update_input_label_IDX_global(1);
-}
-
-void update_pot_2_label_global(void)
-{
-    update_input_label_IDX_global(2);
-}
-
-void update_pot_3_label_global(void)
-{
-    update_input_label_IDX_global(3);
-}
-
-void update_pot_4_label_global(void)
-{
-    update_input_label_IDX_global(4);
-}
-
-void update_slider_1_label_global(void)
-{
-    // update_slider_label_IDX(1);
-}
-
-void update_slider_2_label_global(void)
-{
-    // update_slider_label_IDX(2);
-}
-
-void update_input_label_IDX_step(uint8_t idx)
+void update_input_label_IDX_step(uint8_t idx, bool showVal)
 {
     uint8_t x = 0;
     uint8_t y =  info_pot_label_y - text_height;
     uint16_t color = yellows[idx];
-    char* label = currentScreen->inputLabelBankStep_current[idx];
+    const char* label;
+
+    if (showVal){
+        char num_char[10];
+        itoa(getInputValueByIDX(idx), num_char, 10);
+        label = num_char;
+    } else {
+        label = currentScreen -> inputLabelBankStep_current[idx];
+    }
 
     switch (idx)
     {
@@ -345,6 +348,7 @@ void update_input_label_IDX_step(uint8_t idx)
         break;
 
     default:
+        return;
         break;
     }
     oled.fillRect(x, y, info_pot_width, text_height + 2, BLACK);
@@ -353,35 +357,44 @@ void update_input_label_IDX_step(uint8_t idx)
     oled.println(label);
     //oled.drawRect(x, y, info_pot_width, text_height, BLUE_2);
 }
-void update_input_label_IDX_global(uint8_t idx)
+void update_input_label_IDX_global(uint8_t idx, bool showVal)
 {
-    // uint8_t x = 0;
-    // uint8_t y =  info_pot_label_y - text_height;
-    // uint16_t color = yellows[idx];
-    // char* label = currentScreen->inputLabelBankStep_current[idx];
+    uint8_t x = 0;
+    uint8_t y =  info_pot_label_y - text_height;
+    uint16_t color = yellows[idx];
+    const char* label;
 
-    // switch (idx)
-    // {
-    // case 1:
-    //     x = info_pot1_x_start;
-    //     break;
-    // case 2:
-    //      x = info_pot2_x_start;
-    //     break;
-    // case 3:
-    //     x = info_pot3_x_start;
-    //     break;
-    // case 4:
-    //     x = info_pot4_x_start;
-    //     break;
+    if (showVal){
+        char num_char[10];
+        itoa(getInputValueByIDX(idx), num_char, 10);
+        label = num_char;
+    } else {
+        label = currentScreen->inputLabelBankGlobal_current[idx];
+    }
 
-    // default:
-    //     break;
-    // }
-    // oled.fillRect(x, y, info_pot_width, text_height + 2, BLACK);
-    // oled.setCursor(x+2, y);
-    // oled.setTextColor(color);
-    // oled.println(label);
+    switch (idx)
+    {
+    case 0:
+        x = info_pot1_x_start;
+        break;
+    case 1:
+         x = info_pot2_x_start;
+        break;
+    case 2:
+        x = info_pot3_x_start;
+        break;
+    case 3:
+        x = info_pot4_x_start;
+        break;
+
+    default:
+        return;
+        break;
+    }
+    oled.fillRect(x, y, info_pot_width, text_height + 2, BLACK);
+    oled.setCursor(x+2, y);
+    oled.setTextColor(color);
+    oled.println(label);
     //oled.drawRect(x, y, info_pot_width, text_height, BLUE_2);
 }
 
@@ -409,6 +422,26 @@ void update_slider_label_IDX(uint8_t idx, char* label)
     oled.print(label);
 }
 
+void update_input_display_ALL_step(void)
+{
+    for (uint8_t i = 0; i < 6; i++)
+    {
+        update_input_disp_dotline(i);
+        update_input_label_IDX_step(i);
+    }
+}
+
+void update_input_display_ALL_global(void)
+{
+    for (uint8_t i = 0; i < 6; i++)
+    {
+        update_input_disp_dotline(i);
+        update_input_label_IDX_global(i);
+    }
+
+    clear_step_arrows_ALL();
+}
+
 void nextScreen(void)
 {
     currentScreenIDX++;
@@ -416,7 +449,7 @@ void nextScreen(void)
     currentScreen = &screens[currentScreenIDX];
 }
 
-void prevScreen(void)
+void prevScreen(void) 
 {
     currentScreenIDX--;
     if (currentScreenIDX < 0) currentScreenIDX = screens.size() - 1;
@@ -430,7 +463,7 @@ void prevScreen(void)
 ************************************************************************
 */
 
-Screen::Screen(char* Title, uint16_t TitleColor)
+Screen::Screen(const char* Title, uint16_t TitleColor)
 {
     title = Title;
     titleColor = TitleColor;
@@ -471,7 +504,7 @@ void Screen::changeBankGlobal(int8_t dir = 1)
     //     break;
     }
 
-void Screen::changeBankStep(int8_t dir = 1)
+void Screen::changeBankStep(int8_t dir)
 {
     (dir > 0) ? inputBankStep_IDX++ : inputBankStep_IDX--;
     if (inputBankStep_IDX > inputLabelBanksStep.size()) inputBankStep_IDX = inputLabelBanksStep.size() - 1;
@@ -482,30 +515,30 @@ void Screen::changeBankStep(int8_t dir = 1)
     inputFunctionBankStep_current = inputFunctionBanksStep[inputBankStep_IDX];
 }
 
-void  Screen::addInputLabelBankGlobal(char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
-                                      char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+void  Screen::addInputLabelBankGlobal(const char* knob1, const char*knob2, const char*knob3, 
+                                      const char* knob4, const char* slider1, const char* slider2)
 {
     inputLabelBanksGlobal.push_back({knob1, knob2, knob3, knob4, slider1, slider2});
 
 }
 
-void  Screen::addInputLabelBankStep(char* knob1 = "-", char* knob2 = "-", char* knob3 = "-", 
-                                    char* knob4 = "-", char* slider1 = "-", char* slider2 = "-")
+void  Screen::addInputLabelBankStep(const char* knob1, const char* knob2, const char*knob3, 
+                                    const char* knob4, const char* slider1, const char* slider2)
 {
     inputLabelBanksStep.push_back({knob1, knob2, knob3, knob4, slider1, slider2});
 }
 
-void Screen::addInputFunctionBankGlobal(callback knob1_func = VOIDCALLBACK, callback knob2_func = VOIDCALLBACK, 
-                                        callback knob3_func = VOIDCALLBACK, callback knob4_func = VOIDCALLBACK, 
-                                        callback slider1_func = VOIDCALLBACK, callback slider2_func = VOIDCALLBACK)
+void Screen::addInputFunctionBankGlobal(callback knob1_func, callback knob2_func, 
+                                        callback knob3_func, callback knob4_func, 
+                                        callback slider1_func, callback slider2_func)
 {
     inputFuncionBanksGlobal.push_back({knob1_func, knob2_func, knob3_func, knob4_func, 
                                         slider1_func, slider2_func});
 }
 
-void Screen::addInputFunctionBankStep(callbackStep knob1_func = VOIDCALLBACKSTEP, callbackStep knob2_func = VOIDCALLBACKSTEP, 
-                                     callbackStep knob3_func = VOIDCALLBACKSTEP, callbackStep knob4_func = VOIDCALLBACKSTEP, 
-                                     callbackStep slider1_func = VOIDCALLBACKSTEP, callbackStep slider2_func = VOIDCALLBACKSTEP)
+void Screen::addInputFunctionBankStep(callbackStep knob1_func, callbackStep knob2_func, 
+                                     callbackStep knob3_func, callbackStep knob4_func, 
+                                     callbackStep slider1_func, callbackStep slider2_func)
 {
     inputFunctionBanksStep.push_back({knob1_func, knob2_func, knob3_func, knob4_func, 
                                  slider1_func, slider2_func});
@@ -538,12 +571,100 @@ void run_input_change_function_step(Sequencer& seq, uint8_t input_idx, uint8_t s
 }
 
 /*
+***************************  ~~ Displaying Sequencer ~~  **************************
+
+
+************************************************************************************
+*/
+
+void draw_seq_outline(void)
+{
+    uint8_t x = stepDispSpacing;
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        oled.drawRect(x, seq_disp_y, stepWidth, stepWidth, colors[Sequencer::getCurrentSequencer()->colorSetIDX][4]);
+        x += stepDispSpacing + stepWidth;
+    }
+}
+
+// Draw the current step, erase the last'n
+void draw_cur_seq_step(void)
+{
+    uint8_t cur_step_num  = Sequencer::getCurrentSequencer() -> getCurrentStepNumber();
+    uint8_t x = stepDispSpacing + (stepWidth + stepDispSpacing) * cur_step_num;
+    uint8_t prevx;
+    uint16_t color = colors[Sequencer::getCurrentSequencer()->colorSetIDX][4];
+    if (cur_step_num == 0){  // On the first step displayed.
+        prevx = stepDispSpacing + ((stepWidth + stepDispSpacing) * 15);
+    } else {
+        prevx = x - stepWidth - stepDispSpacing;
+    }      
+
+    oled.fillRect(x, seq_disp_y, stepWidth + 1, stepWidth + 1, color);
+    oled.fillRect(prevx, seq_disp_y, stepWidth+1, stepWidth+1, BLACK);
+    oled.drawRect(prevx, seq_disp_y, stepWidth+1, stepWidth+1, color);
+}
+
+// Draw a straight arrow.
+void draw_arrow(uint8_t tip_x, uint8_t tip_y, uint8_t len, uint16_t color, uint8_t dir)
+{
+    const uint8_t arrow_width = 4;
+
+    switch (dir)
+    {
+    case 0:     // Up
+        oled.fillTriangle(tip_x, tip_y, tip_x - arrow_width, tip_y + arrow_width, tip_x + arrow_width, tip_y + arrow_width, color);
+        oled.drawFastVLine(tip_x, tip_y, len, color);
+        break;
+
+    case 1:     // Right
+        oled.fillTriangle(tip_x, tip_y, tip_x - arrow_width, tip_y - arrow_width, tip_x - arrow_width, tip_y + arrow_width, color);
+        oled.drawFastHLine(tip_x - len, tip_y, len, color);
+        break;
+
+    case 2:     // Down 
+        oled.fillTriangle(tip_x, tip_y, tip_x - arrow_width, tip_y - arrow_width, tip_x + arrow_width, tip_y - arrow_width, color);
+        oled.drawFastVLine(tip_x, tip_y - len, len, color);
+        break;
+
+    case 3:     // Left
+        oled.fillTriangle(tip_x, tip_y, tip_x + arrow_width, tip_y - arrow_width, tip_x + arrow_width, tip_y + arrow_width, color);
+        oled.drawFastHLine(tip_x, tip_y, len, color);
+        break;
+    default:
+        break;
+    }
+}
+// Draw the current step, erase the last'n
+void draw_step_held_arrow_at_IDX(uint8_t idx, uint16_t color)
+{
+    uint8_t x = stepDispSpacing + (stepWidth + stepDispSpacing) * idx + (stepWidth/2);
+    uint16_t color_ = colors[Sequencer::getCurrentSequencer()->colorSetIDX][4];
+    uint8_t prevx;
+    if (idx == 0){  // On the first step displayed.
+        prevx = stepDispSpacing + ((stepWidth + stepDispSpacing) * 15);
+    } else {
+        prevx = x - stepWidth - stepDispSpacing;
+    }      
+    draw_arrow(prevx, seq_disp_y-10, 10, BLACK, 2);
+    draw_arrow(x, seq_disp_y - 10, 10, color, 2);
+}
+
+void clear_step_arrows_ALL(void)
+{
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        draw_step_held_arrow_at_IDX(i, BLACK);
+    }
+}
+/*
 *************************** Utility / Testing **************************
 
                       Functions for testing n stuff
 
 ************************************************************************
 */
+
 uint32_t get_neopix_color_by_idx(int16_t colorsetIdx, int16_t colorShadeIdx)
 {
     uint32_t color = all_colors_neopix[colorsetIdx][colorShadeIdx];
@@ -575,7 +696,7 @@ void FUNderline(uint8_t startX, uint8_t startY, uint8_t length, uint16_t color)
     } 
 }
 
-void VOIDCALLBACK(int idx=0)
+void VOIDCALLBACK(int idx)
 {
     Serial.println("Void Callback called. No action taken.");
 }
@@ -584,11 +705,6 @@ void VOIDCALLBACKSTEP(Sequencer& seq, uint8_t idx, uint8_t step)
 {
     Serial.println("Void Callback STEP called. No action taken.");
 }
-
-// void VOIDCALLBACK(Sequencer&, uint8_t idx=0, int step_number = 0)
-// {
-//     Serial.println("Void Callback called. No action taken.");
-// }
 
 void z_showAllColors(void)
 {
@@ -623,19 +739,15 @@ void z_displayUpdateTest(int x)
     oled.println(String(x));
 }
 
-void  z_funNoteAnimation(uint8_t xtraX = 0, uint8_t xtraY = 0, uint8_t size = 1)
+void  z_funNoteAnimation(uint8_t xtraX, uint8_t xtraY, uint8_t size)
 {
     uint8_t currentX = 10 + xtraX;
     uint8_t currentY = 20 + xtraY;
-    uint8_t PrevX = currentX;
-    uint8_t prevY = currentY;
     uint8_t coloridx = 0;
     uint8_t colorAryIDX = 0;   // trakc the color bank
 
     for (uint8_t i = 0; i < 300; i ++)
     {
-        PrevX = currentX;
-        prevY = currentY;
         currentX++;
         currentY++;
         //drawNoteSymbol(PrevX, prevY, size, BLACK);

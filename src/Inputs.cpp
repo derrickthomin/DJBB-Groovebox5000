@@ -16,7 +16,7 @@
 #define MUX_3_DATA_PIN       16              // ANALOG  - Handles twist pots + joystick + joystick click
 #define SLIDEPOT_LEFT_PIN    25              // Left of the 2 slide pots
 #define SLIDEPOT_RIGHT_PIN   24
-#define PLAYBUTTON_PIN       31             // Mushy little buton 
+#define PLAYBUTTON_PIN       31             
 
 // ********** SET TO TRUE TO PRINT TEST STUFF **************
 
@@ -28,7 +28,6 @@ const uint8_t  selectPins[3]         = {MUX_CONTROL_S0, MUX_CONTROL_S1, MUX_CONT
 uint8_t        slidePotPins[2]       = {SLIDEPOT_LEFT_PIN, SLIDEPOT_RIGHT_PIN};
 const uint8_t  analogChangeThres     = 1;       // Dont count as changed unless it changed by this much. (note this is applied after mapping to 0 - 100)
 const uint16_t debounceMillis        = 10;      // If button is on for this long, it's on forreal
-const uint16_t longPressMillis       = 750;     // How many millisecondsd count as a long button press
 const uint8_t  analogBigChangeThresh = 30;      // Big swing in analog value (out of 100)
 
 // Sequencer Buttons
@@ -53,6 +52,7 @@ uint16_t joystickGuiLastY;
 bool     playButtoNow, playButtonState, playButtonQuickpress, 
          playButtonDoublePress, playButtonPrev, playButtonStatePrev = false;
 uint32_t playButtonLastQuickpressMillis = millis();                      // Track the last quick press - for detecting double presses
+uint32_t lastInputChangeMillis = millis();
 
 elapsedMillis playButtonOntime = 0;
 
@@ -84,8 +84,8 @@ bool checkAllInputs(void)                // Check the state of sequencer + updat
         knobAndJoystickNow[pin]     = map(analogRead(MUX_3_DATA_PIN), 0, 1023, 0, 100);
 
         // 2.5  Catch any new press + releases
-        if (!seqButtonNow[pin] && seqButtonStatePrev[pin] && seqButtonOntime[pin] < longPressMillis) seqButtonsNewQuickpress[pin] = true;
-        if (!seqButtonNow[pin + 8] && seqButtonStatePrev[pin + 8] && seqButtonOntime[pin + 8] < longPressMillis) seqButtonsNewQuickpress[pin + 8] = true;
+        if (!seqButtonNow[pin] && seqButtonStatePrev[pin] && seqButtonOntime[pin] < INPUT_LONGPRESS_MILLIS) seqButtonsNewQuickpress[pin] = true;
+        if (!seqButtonNow[pin + 8] && seqButtonStatePrev[pin + 8] && seqButtonOntime[pin + 8] < INPUT_LONGPRESS_MILLIS) seqButtonsNewQuickpress[pin + 8] = true;
 
         // 3. Reset button timer if it's off now
         if (!seqButtonNow[pin])     seqButtonOntime[pin] = 0;
@@ -151,7 +151,7 @@ bool checkAllInputs(void)                // Check the state of sequencer + updat
     playButtonStatePrev         = playButtonState;
     playButtoNow                = !digitalRead(PLAYBUTTON_PIN);
 
-    if (!playButtoNow && playButtonStatePrev && playButtonOntime < longPressMillis && playButtonOntime > debounceMillis)    // Button was released, and was not held for too long
+    if (!playButtoNow && playButtonStatePrev && playButtonOntime < INPUT_LONGPRESS_MILLIS && playButtonOntime > debounceMillis)    // Button was released, and was not held for too long
       {
         playButtonQuickpress = true;
         if (millis() - playButtonLastQuickpressMillis < 500) playButtonDoublePress = true;
@@ -161,6 +161,13 @@ bool checkAllInputs(void)                // Check the state of sequencer + updat
     (playButtoNow && playButtonOntime > debounceMillis) ? playButtonState = true : playButtonState = false;
     if (!playButtoNow) playButtonOntime = 0;
 
+    if (haveAnyChanged) lastInputChangeMillis = millis();
+    int32_t millisDiff = millis() - lastInputChangeMillis;
+    if (millisDiff > INPUT_CHG_DISP_TIME) {
+        refreshInputDisp();
+        lastInputChangeMillis = millis() + 86400000;                 // TLDR; dont refresh again until another knob changes
+    }
+  
     return haveAnyChanged; 
 }
 
@@ -190,32 +197,34 @@ void processInputs(Sequencer& seq)
     }
 
     //   2)  Button is being held... listen for other knob twists n such
-    if (seqButtonOntime[i] > longPressMillis)
+    if (seqButtonOntime[i] > INPUT_LONGPRESS_MILLIS)
     {
       seqButtonHeld = true;
       drawInfoBar("Editing Step: ", i);
+      draw_step_held_arrow_at_IDX(i, BLUE_5);
 
       // Button held and Pot/Knob 1 Changed (input idx: 0)
       if (knob1Changed()){
         int8_t input_idx = 0;
-        update_pot_display_val_IDX(input_idx);
-        update_input_label_IDX_step(input_idx);
+        update_input_disp_dotline(input_idx);
+        update_input_label_IDX_step(input_idx, true);
         run_input_change_function_step(seq, input_idx, i);
       }
 
       // Button held and Pot/Knob 2 Changed (input idx: 1)
       if (knob2Changed()){
         uint8_t input_idx = 1;
-        update_pot_display_val_IDX(input_idx);
-        update_input_label_IDX_step(input_idx);
+        update_input_disp_dotline(input_idx);
+        update_input_label_IDX_step(input_idx, true);
         run_input_change_function_step(seq, input_idx, i);
       }
 
       // Button held and Pot/Knob 3 Changed (input idx: 2)
       if (knob3Changed()){
         uint8_t input_idx = 2;
-        update_pot_display_val_IDX(input_idx);
-        update_input_label_IDX_step(input_idx);
+
+        update_input_disp_dotline(input_idx);
+        update_input_label_IDX_step(input_idx, true);
         run_input_change_function_step(seq, input_idx, i);
       }
       
@@ -223,17 +232,15 @@ void processInputs(Sequencer& seq)
       if (knob4Changed()){
         uint8_t input_idx = 3;
 
-        update_pot_display_val_IDX(input_idx);
-
-        update_pot_4_label_global();
-        update_input_label_IDX_step(input_idx);
+        update_input_disp_dotline(input_idx);
+        update_input_label_IDX_step(input_idx, true);
         run_input_change_function_step(seq, input_idx, i);
       }
 
       // Button held and Slider A Changed (input idx: 4)
       if (sliderAChanged()){
         uint8_t input_idx = 4;
-        update_slider_label_IDX(1, "rel");
+
         update_slider_display_val_IDX(input_idx);
         run_input_change_function_step(seq, input_idx, i);
       }
@@ -241,7 +248,7 @@ void processInputs(Sequencer& seq)
       // Button held and Slider B Changed (input idx: 5)
       if (sliderBChanged()){
         uint8_t input_idx = 5;
-        update_slider_label_IDX(2, "swng");
+        
         update_slider_display_val_IDX(input_idx);
         run_input_change_function_step(seq, input_idx, i);
       }
@@ -265,7 +272,7 @@ void processInputs(Sequencer& seq)
     playButtonDoublePress = false;
   }
 
-  if (playButtonOntime > longPressMillis)            // Holding play button... go to master settings
+  if (playButtonOntime > INPUT_LONGPRESS_MILLIS)            // Holding play button... go to master settings
   {
     Serial.println("play button hold");
   }
@@ -279,25 +286,29 @@ void processInputs(Sequencer& seq)
   if (knob1Changed())                 
   {
     uint8_t input_idx = 0;
-    update_pot_display_val_IDX(input_idx);
+    update_input_disp_dotline(input_idx);
+    update_input_label_IDX_global(input_idx, true);
     run_input_change_function_global(input_idx);
   }
   if (knob2Changed())                 
   {
     uint8_t input_idx = 1;
-    update_pot_display_val_IDX(input_idx);
+    update_input_disp_dotline(input_idx);
+    update_input_label_IDX_global(input_idx, true);
     run_input_change_function_global(input_idx);
   }
   if (knob3Changed())                 
   {
     uint8_t input_idx = 2;
-    update_pot_display_val_IDX(input_idx);
+    update_input_disp_dotline(input_idx);
+    update_input_label_IDX_global(input_idx, true);
     run_input_change_function_global(input_idx);
   }
   if (knob4Changed())
   {
     uint8_t input_idx = 3;
-    update_pot_display_val_IDX(input_idx);
+    update_input_disp_dotline(input_idx);
+    update_input_label_IDX_global(input_idx, true);
     run_input_change_function_global(input_idx);
   }
 

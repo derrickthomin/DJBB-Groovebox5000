@@ -6,30 +6,34 @@
 
 Step::Step(uint8_t colorSetIDX)
 {
-    state = false;
-    played = false;
-    volume = 0.3;
-    swingMcros = 0;            // How much swing to apply (positive or negative to hit early or late.)
-    attack = 0;
-    release = 500;
-    decay = 500;
-    sustain = 0; 
-    reverbSendLevel = 0;  
-    delaySendLevel = 0;
-    ratchetCount = 0;
-    assignedVoice = 1;         // Track which voice to use when this hits. z
-    colorSetIDXstp = colorSetIDX;
-    color = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
+    state            = false;
+    played           = false;
+    volume           = 0.3;
+    swingMcros       = 0;            // How much swing to apply (positive or negative to hit early or late.)
+    attack           = 0;
+    release          = 500;
+    decay            = 500;
+    sustain          = 0; 
+    reverbSendLevel  = 0;  
+    delaySendLevel   = 0;
+    ratchetCount     = 0;
+    assignedVoice    = 1;         // Track which voice to use when this hits. z
+    colorSetIDXstp   = colorSetIDX;
+    color            = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
+
     // FX n Filters
     bitcrushDepth    = DEFAULT_CRUSH_BITDEPTH;        // Bitcrush dept 1-16
     bitcrushSampRate = DEFAULT_CRUSH_FREQ;            // Up to 44.1k
     filterFreq       = DEFAULT_FILT_FREQ;             // 0 - 20k
     filterQ          = DEFAULT_FILT_Q;                // 0.7 - 5. Above 0.707 will add gain.
+    filter_LP_amt    = 1.0;                           // 1.0 = passthru, less = attenuate
+    filter_HP_amt    = 1.0;                           // 
+
     // Drum
-    drumFreq         = DEFAULT_DRUM_FREQ;                  // Drum voice frequency 
-    drumLength       = DEFAULT_DRUM_LENGTH;                 // How long is the hit
-    drumPMod         = DEFAULT_DRUM_PMOD;                   // Pitch mod
-    drum2ndHitMix    = DEFAULT_DRUM_MIX2;                   // Level of 2nd hit
+    drumFreq         = DEFAULT_DRUM_FREQ;             // Drum voice frequency 
+    drumLength       = DEFAULT_DRUM_LENGTH;           // How long is the hit
+    drumPMod         = DEFAULT_DRUM_PMOD;             // Pitch mod
+    drum2ndHitMix    = DEFAULT_DRUM_MIX2;             // Level of 2nd hit
 
 }
 std::vector<Sequencer*> Sequencer::allSequencers = {};
@@ -38,23 +42,21 @@ uint8_t Sequencer::numSequencers = 0;
 
 Sequencer::Sequencer(uint8_t a, uint8_t b)
 {
-    colorSetIDX = 6;
-    color = get_neopix_color_by_idx(colorSetIDX,3);
-    defaultStepColor = color;
-    playingState = false;
-    stepPlayed = false;
-    numSteps = a;
-    bpm = b;
-    startingStep = numSteps - 1;                          // Start at "end" so we don't miss the 1st step
-    currentStep = startingStep;
-    microsecondsPerStep = 60 * 1000 * 1000 / (bpm * 4);    // 4 = 16th notes. 1 = 1/4 notes. Etc.
-    maxSwingMicros = (microsecondsPerStep / 2) - 400;     // Set max swing to a little less than half of a step 
-    microsecondsNextStep = microsecondsPerStep;            // Track this separately... may need to apply swing and play a note early or late.    
-    microsecondsNextNote = microsecondsPerStep;        
-
     allSequencers.push_back(this);
-    curSequencerIDX = 0;
-    numSequencers++;      
+    numSequencers++; 
+    colorSetIDX          = 6;
+    color                = get_neopix_color_by_idx(colorSetIDX,3);
+    defaultStepColor     = color;
+    playingState         = false;
+    stepPlayed           = false;
+    numSteps             = a;
+    bpm                  = b;
+    setBpm(b);
+    startingStep         = numSteps - 1;                          // Start at "end" so we don't miss the 1st step
+    currentStep          = startingStep;
+    microsecondsNextStep = microsecondsPerStep;             // Track this separately... may need to apply swing and play a note early or late.    
+    microsecondsNextNote = microsecondsPerStep;        
+    curSequencerIDX      = 0;   
 }
 
 /*
@@ -93,6 +95,11 @@ uint8_t Sequencer::   getNextStepNumber(void)
 {
     if (currentStep == numSteps-1) return 0;
     return currentStep + 1;
+}
+
+Sequencer* Sequencer::getCurrentSequencer(void)
+{
+    return Sequencer::allSequencers[Sequencer::curSequencerIDX];
 }
 
 /*
@@ -140,15 +147,19 @@ void Step::setPlayingState  (bool playstate)        {played = playstate;}
 
 void Sequencer::setStepNumber(uint8_t step) {currentStep = step;}
 void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
-void Sequencer::setBpm(uint16_t newbpm)
+void Sequencer::setBpm       (uint8_t newbpm)
 {
-    // todo - check against max and min bpm
-    // todo - Set new microsends per step values
-    // todo - Set new max swing value
-    // todo - recalc next note time? Or maybe not?
+    if (newbpm > MAX_BPM) newbpm = MAX_BPM;
+    if (newbpm < MIN_BPM) newbpm = MIN_BPM;
+    bpm = newbpm;
+
+    // Recalculate BPM dependent FX, etc.
+    microsecondsPerStep = 60 * 1000 * 1000 / (bpm * 4);  
+    maxSwingMicros = (microsecondsPerStep / 2) - 400;
 }
 
 // ----- ------- ------ INDEX FUNCTIONS ------ -------- --------
+void cb_seq_set_bpm                        (uint8_t val) {Sequencer::getCurrentSequencer() -> setBpm(map(val, 0, 100, MIN_BPM, MAX_BPM));}
 void cb_set_attack                         (Sequencer& seq, uint8_t step_idx, uint8_t val) {seq.setStepAttackAtIndex(step_idx, val);}
 void cb_set_release                        (Sequencer& seq, uint8_t step_idx, uint8_t val) {seq.setStepReleaseAtIndex(step_idx, val);}
 void cb_set_decay                          (Sequencer& seq, uint8_t step_idx, uint8_t val) {seq.setStepDecayAtIndex(step_idx, val);}
@@ -213,19 +224,33 @@ void Step::playNote(void)
 
     // Update voice settings for this step
     // djt - prob reset to default after playing??
-    AudioNoInterrupts();
+    // djt - check to make sure the val is different before changing??
+
+    AudioNoInterrupts(); // All Voices
     voice->setAttack(attack);
     voice->setDecay(decay);
     voice->setSustain(sustain);
     voice->setRelease(release);
-    voice->setDrumFreq(drumFreq);
-    voice->setDrumPMod(drumPMod);
-    voice->setDrumLength(drumLength);
-    voice->setDrum2ndMix(drum2ndHitMix);
     voice->setVolume(volume);
-    AudioInterrupts();
 
-    voice->play();
+    switch (voice->getType())
+    {
+    case 0:  // Sampler
+        break;
+
+    case 1:  // Noise
+        break;
+
+    case 2:  // Drum Synth
+        voice->setDrumFreq(drumFreq);
+        voice->setDrumPMod(drumPMod);
+        voice->setDrumLength(drumLength);
+        voice->setDrum2ndMix(drum2ndHitMix);
+        break;
+
+    }
+    AudioInterrupts();
+    voice -> play();
     voice -> printVoiceDebug();
 }
 
@@ -384,5 +409,4 @@ void Sequencer::debugPrintSeqData(String message, bool extraSpace = false, bool 
     Serial.println("Next Step State: \t" + String(getNextStepState()));
     Serial.println("Current Step Swing: \t" + String(getCurrentStepSwing()));
     Serial.println("Next Step Swing: \t" + String(getNextStepSwing()));
-
 }

@@ -4,82 +4,42 @@
 #include <vector>
 #include "Common.h"
 #include "Audiostuff.h"
+#include "settings.h"
 
 extern Adafruit_NeoPixel strip;
-
-// Defaults
-#define DEFAULT_FILT_FREQ      17000
-#define DEFAULT_FILT_Q          0.7
-#define DEFAULT_CRUSH_BITDEPTH  16
-#define DEFAULT_CRUSH_FREQ     44100
-#define DEFAULT_NOISE_LVL      0.5
-#define DEFAULT_DRUM_FREQ      300
-#define DEFAULT_DRUM_PMOD      0.6
-#define DEFAULT_DRUM_LENGTH    100
-#define DEFAULT_DRUM_MIX2      0 
-// Drum
-#define MIN_DRUM_FREQUENCY     25
-#define MAX_DRUM_FREQUENCY     800
-#define MIN_DRUM_LEN           1      //ms
-#define MAX_DRUM_LEN           1000    //ms
-#define MIN_DRUM_PMOD          0.1
-#define MAX_DRUM_PMOD          0.9   
-#define MIN_DRUM_MIX2          0
-#define MAX_DRUM_MIX2          0.5   // IDK what the units even are. needt to test   
-// Filter / FX
-#define MIN_FILTER_FREQ        20
-#define MAX_FILTER_FREQ        20000
-#define MIN_FILTER_Q           0.7
-#define MAX_FILTER_Q           4
-#define MIN_CRUSH_BITDEPTH     3
-#define MAX_CRUSH_BITDEPTH     16
-#define MIN_CRUSH_FREQ         1000
-#define MAX_CRUSH_FREQ         44100
-#define MIN_RATCHET            0
-#define MAX_RATCHET            4
-// ASDR / Basic
-#define MIN_VOICE_VOL          0.1   // Don't want to go all the way to 0... should just turn the step off at that point
-#define MAX_VOICE_VOL          0.6
-#define MIN_ATTACK             0
-#define MAX_ATTACK             500   
-#define MIN_RELEASE            10
-#define MAX_RELEASE            2000
-#define MIN_SUSTAIN            0.2
-#define MAX_SUSTAIN            1.0
-#define MIN_DECAY              0
-#define MAX_DECAY              2000
 
 // Need to track each step individually for param locks and suck
 class Step {
     private:
-
-        bool state;                     // Is it on or nah?
-        bool played;                    // True if played, false if not. Resets when loops around.
-        float volume;
-        int32_t swingMcros;            // How much swing to apply (positive or negative to hit early or late.)
+        Voice*   voice;                    // Store pointer to a voice object
+        bool     state;                     // Is it on or nah?
+        bool     played;                    // True if played, false if not. Resets when loops around.
+        float    volume;
+        int32_t  swingMcros;              // How much swing to apply (positive or negative to hit early or late.)
         uint16_t attack;
         uint16_t decay;
         uint16_t sustain;
         uint16_t release;
-        uint8_t reverbSendLevel;  
-        uint8_t delaySendLevel;
-        uint8_t ratchetCount;
-        uint8_t assignedVoice;         // Track which voice to use when this hits.
-        Voice* voice;                  // Store pointer to a voice object
+        uint8_t  reverbSendLevel;  
+        uint8_t  delaySendLevel;
+        uint8_t  ratchetCount;
+        uint8_t  assignedVoice;            // Track which voice to use when this hits.
         uint32_t color;
-        uint8_t colorSetIDXstp;
+        uint8_t  colorSetIDXstp;
 
-        // Drum voice settings
+//      ---- Drum voice settings ----
         uint16_t drumFreq;                 // Drum voice frequency 
         uint16_t drumLength;               // How long is the hit
         float    drumPMod;                 // Pitch mod
         float    drum2ndHitMix;            // Level of 2nd hit
 
-        // FX n Filters
-        uint8_t  bitcrushDepth;        // Bitcrush dept 1-16
+//      -----   FX n Filters  ------
+        uint8_t  bitcrushDepth;           // Bitcrush dept 1-16
         uint16_t bitcrushSampRate;        // Up to 44.1k
         uint16_t filterFreq;              // 0 - 20k
         float    filterQ;                 // 0.7 - 5. Above 0.707 will add gain.
+        float    filter_LP_amt;           // 1.0 = passthru, less = attenuate
+        float    filter_HP_amt;           // DJT IMPLEMENT ME... need to figure out how ot handl ethe mixer inputs..  dont want too many params to voice constructor   
     
     public:
         Step(uint8_t colorSetIDX);
@@ -88,34 +48,34 @@ class Step {
         void     assignVoice(Voice* vOice){voice = vOice;}
 
         // -------- Getters --------//
-        uint16_t getStepAttack(void);
-        bool     getStepState(void) {return state;}
-        int32_t  getSwingMicros(void) {return swingMcros;}
+        uint16_t getStepAttack  (void);
+        bool     getStepState   (void) {return state;}
+        int32_t  getSwingMicros (void) {return swingMcros;}
         bool     getPlayingState(void){return played;}
-        uint32_t getColor(void){return color;}
-        uint8_t  getVoiceNumber(void){return voice -> getID();}
-        uint16_t getVoiceAttack(void){return voice -> getAttack();}
+        uint32_t getColor       (void){return color;}
+        uint8_t  getVoiceNumber (void){return voice -> getID();}
+        uint16_t getVoiceAttack (void){return voice -> getAttack();}
 
         // -------- Setters --------//  ---- ALL expect an input of 0 - 100.
-        void setColor  (uint32_t colour){color = colour;}
-        void flipState (void){state = !state;}
-        void stepOn    (void) {state = true;}
-        void stepOff   (void) {state = false;}
-        void setAttack (uint8_t val);
-        void setRelease(uint8_t val);
-        void setDecay  (uint8_t val);
-        void setSustain(uint8_t val);
+        void setColor          (uint32_t colour){color = colour;}
+        void flipState         (void){state = !state;}
+        void stepOn            (void) {state = true;}
+        void stepOff           (void) {state = false;}
+        void setAttack         (uint8_t val);
+        void setRelease        (uint8_t val);
+        void setDecay          (uint8_t val);
+        void setSustain        (uint8_t val);
 
-        void setRatchetCount (uint8_t val);
-        void setSwingMicros  (int32_t swingMicr);
-        void setVolume       (uint8_t val);
-        void setPlayingState (bool playstate);
+        void setRatchetCount   (uint8_t val);
+        void setSwingMicros    (int32_t swingMicr);
+        void setVolume         (uint8_t val);
+        void setPlayingState   (bool playstate);
         
         // drum voice
-        void setDrumPMod      (uint8_t val);
-        void setDrumLength    (uint8_t val);
-        void setDrumMix2      (uint8_t val);
-        void setDrumFreq      (uint8_t val);
+        void setDrumPMod       (uint8_t val);
+        void setDrumLength     (uint8_t val);
+        void setDrumMix2       (uint8_t val);
+        void setDrumFreq       (uint8_t val);
 
         // fx n filter
         void setBitCrushDepth  (uint8_t val);
@@ -129,26 +89,26 @@ class Step {
 class Sequencer {
 
     private:
-        bool    playingState;               // Is the sequencer currently playing
-        bool    stepPlayed;                 // Track if we already played a note for this step
-        uint8_t numSteps;
-        uint8_t currentStep;
-        int8_t  lastPlayedStep;
-        uint8_t bpm;
-        uint8_t startingStep;
-        unsigned long microsecondsPerStep;
         elapsedMicros seqElapsedMicros;
-        int32_t microsecondsNextStep;      // djt - do we need this? prob not...
-        uint32_t microsecondsNextNote;     // Because of swing or other future FX, we may want hit early or late (out of sync with actual step)
-        uint32_t maxSwingMicros;           // Max swing allowed based on microsecs per step
-        uint32_t defaultStepColor;
+        unsigned long microsecondsPerStep;
+        bool          playingState;              // Is the sequencer currently playing
+        bool          stepPlayed;                // Track if we already played a note for this step
+        uint8_t       numSteps;
+        uint8_t       currentStep;
+        int8_t        lastPlayedStep;
+        uint8_t       bpm;
+        uint8_t       startingStep;
+        int32_t       microsecondsNextStep;      // djt - do we need this? prob not...
+        uint32_t      microsecondsNextNote;      // Because of swing or other future FX, we may want hit early or late (out of sync with actual step)
+        uint32_t      maxSwingMicros;            // Max swing allowed based on microsecs per step
+        uint32_t      defaultStepColor;
 
     public:
+        Sequencer(uint8_t, uint8_t);
         std::vector<Step> steps;
+        static std::vector<Sequencer*> allSequencers;
         int8_t colorSetIDX;                // corresponsds to a set of 5 colors
         uint32_t color;                    // Color of the scrolling seq light
-        Sequencer(uint8_t, uint8_t);
-        static std::vector<Sequencer*> allSequencers;
         static int8_t curSequencerIDX;
         static uint8_t numSequencers;
         void initializeSteps(void);
@@ -161,6 +121,7 @@ class Sequencer {
         void clearPrevPlayingState(void);
 
         // -------- Getters --------//
+        static  Sequencer* getCurrentSequencer(void);               // Return the current sequencer 
         uint8_t getStartingStep(void);
         bool    getPlayingState(void);
         uint8_t getLastPlayedStep(void);
@@ -190,7 +151,7 @@ class Sequencer {
 
 
         // -------- Setters --------//
-        void setBpm(uint16_t newbpm);                  // Change the BPM. Handles max / min bpm, updating other sequencer properities such as microsecs / step
+        void setBpm(uint8_t newbpm);                  // Change the BPM. Handles max / min bpm, updating other sequencer properities such as microsecs / step
         void setStepNumber(uint8_t step);
         void flipPlayState(void);
         void resetCounter(void);
@@ -232,6 +193,8 @@ class Sequencer {
 };
 
 // ---- Callback functions for input handling ----- //
+void cb_seq_set_bpm                        (uint8_t val);
+
 void cb_set_attack                         (Sequencer& seq, uint8_t step_idx, uint8_t val);
 void cb_set_release                        (Sequencer& seq, uint8_t step_idx, uint8_t val);
 void cb_set_decay                          (Sequencer& seq, uint8_t step_idx, uint8_t val);
@@ -251,4 +214,4 @@ void cb_set_drumFreq                       (Sequencer& seq, uint8_t step_idx, ui
 void cb_set_swing                          (Sequencer& seq, uint8_t step_idx, uint8_t val);
 
 // Setters
- void setCurrSeqSwingAtIndex(uint8_t step_idx, uint8_t pot_idx);         // Pass a positive or negative value, from - 50 to 50
+void setCurrSeqSwingAtIndex(uint8_t step_idx, uint8_t pot_idx);         // Pass a positive or negative value, from - 50 to 50

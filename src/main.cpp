@@ -66,7 +66,7 @@ void loop()
     inputsChanged = checkAllInputs();   // 1. Check all of our inputs
     processInputs(sequencer_1);         // 2. If any changed, do something in response.
     inputCheckTimer = millis();
-    checkInfoBar();                     // 3. See if we need to erase an info bar. 
+    checkDisplayContext();                     // 3. See if we need to erase an info bar. 
   }
 
   if (!sequencer_1.getPlayingState()){  // Not currently playing - bail early.
@@ -85,6 +85,7 @@ void loop()
     sequencer_1.calcNextNoteTime(false);
     strip.setPixelColor(sequencer_1.getCurrentStepNumber(), sequencer_1.color);                 // Light Current neopixel
     strip.setPixelColor(sequencer_1.getPrevStepNumber() , 0);                                   // Clear previous neopixel
+    draw_cur_seq_step(); // update olde DJT TESTIN GZZZZZ
 
     if (sequencer_1.getPreviousStepState())
     {

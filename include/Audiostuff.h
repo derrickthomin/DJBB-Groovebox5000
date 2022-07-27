@@ -2,8 +2,7 @@
 #include <Audio.h>
 #include <vector>
 #include "Common.h"
-
-#define STARTUP_NUM_VOICES 4    // How many voices to created
+#include "settings.h"
 
 class Voice
 {
@@ -23,7 +22,8 @@ class Voice
         AudioSynthNoisePink*       noise;
         AudioSynthSimpleDrum*      drum;
         AudioPlaySdWav *           samplePlayer;     // Only populated if this voice is a sample player
-        AudioAmplifier *           amplifier;
+        AudioAmplifier *           amplifier_l;
+        AudioAmplifier *           amplifier_r;
 
         // Envelope / core
         uint16_t attack;                   // Current voice attack. If steps have param locks, they will be constantly updating this for their voice before playing.
@@ -42,25 +42,23 @@ class Voice
         uint16_t filterFreq;
         float    filterQ;
 
-        // menu related
-        std::vector<char*> inputLabels_bank1;
-        std::vector<char*> inputLabels_bank2;
-        std::vector<char*> inputLabels_bank3;
-
     public:
-        Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r);
+        Voice(AudioPlaySdWav* sampPlayer, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r, AudioAmplifier* amp_l, AudioAmplifier* amp_r);
         Voice(AudioSynthNoisePink* noise, AudioEffectEnvelope* env_l, AudioEffectEnvelope* env_r, 
-              AudioFilterStateVariable* filt_l, AudioFilterStateVariable* filt_r, 
+              AudioAmplifier* amp_l, AudioAmplifier* amp_r, AudioFilterStateVariable* filt_l, AudioFilterStateVariable* filt_r, 
               AudioEffectBitcrusher* bitcr_l, AudioEffectBitcrusher* bitcr_r);
-        Voice(AudioSynthSimpleDrum* drm, AudioEffectEnvelope* env, AudioAmplifier* amp);
+        Voice(AudioSynthSimpleDrum* drm, AudioEffectEnvelope* env, AudioAmplifier* amp, 
+              AudioEffectBitcrusher* bitcr, AudioFilterStateVariable* filt);
 
         static uint8_t numVoices;                                                  // Track how many voices we have created altogether.
         static std::vector<Voice*> allVoices;                                      // Pointers to all voices. Voices get added automatically when created. DJT - may need to deal with deleting in the future.. but for now whatev
         static void assignDefaultVoicesForSequencer(Sequencer* seq);               // Logic to assign voices to each step based on number of voices. Kind of an "init" type deal.
         void play(void);     
-        void setInputLabels(uint8_t bankNum, std::vector<char*> * labels);                                                      // Play the file or note. DJT - need logic to check what type of voice this is (could be a string, etc.)
+        void setInputLabels(uint8_t bankNum, std::vector<char*> * labels);         // Play the file or note. DJT - need logic to check what type of voice this is (could be a string, etc.)
 
         // -------- Getters --------//
+        uint8_t  getType(void){return type;}
+        const char* getTypeName(void);
         bool     isPlaying(void){return playingState;}                             // DJT - need to code out more logic to check play state... 
         uint16_t getAttack(void){return attack;}          
         uint16_t getRelease(void){return release;}
