@@ -1,12 +1,13 @@
 # DJBB-Groovebox5000
 
-## High level design
+## High level 
 
 * Sequencer object -> vector of step objects -> Each step ponits towards single step object
 
 ## Current Demo / Pics
 todo
 
+## Objects and how they interact
 ### Sequencer
 * House higher level settings, such as BPM, number of steps, color used to represent, etc.
 * This is the main object to interact with. It has a bunch of index functions
