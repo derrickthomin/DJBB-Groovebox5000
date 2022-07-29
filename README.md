@@ -32,4 +32,33 @@ todo
 todo
 
 ## Roadmap
-todo
+- 
+
+### Completed
+none
+
+### Brain dump
+- Global FX
+- Per step fx sends
+- Jumps (specify a jump from step X to Y ever Z sequence plays)
+- Copy + paste full steps
+- Copy + paste step params
+- Propagate step params
+- - Ex: propagate swing value to every 3rd step
+- Global swing
+- Voice swaps (ability to change voice for a step)
+- Voice swap intervals (swap voice every X loops)
+- Random swaps (randomly swap params between steps)
+- Sequence shift (shift the whole thing forward / back)
+- Sequence shift interval (shift only every X loops)
+- Multiple sequences
+- More than 16 steps (low priority.. trying to get variation via intervals to be "uNiQuE"
+- Voice layering
+- Undo (super low priority because it sounds very hard)
+- Record to SD card
+- Multiple "parts" - chaining sequencers
+- Preset saving (low priority... 2 hard)
+- Add voice types (string, sine wave, etc.)
+- Ability to swap files in sample voice (list of SD card files, select)
+- Add RAW audio files of some small primatives (little clicks, transients, other small samples)
+- - Raw as in just an H file with the data ary
