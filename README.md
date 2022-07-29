@@ -20,3 +20,12 @@ Then, the voice play() function is called.
 ### Voice
 * Houses voice specific settings (is this a synth drum voice, sample voice, noise, etc.)
 * These settings are updated by the steps as they play
+
+## Creating new voices
+todo
+
+## Creating new screens
+todo
+
+## Roadmap
+todo
