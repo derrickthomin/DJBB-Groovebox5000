@@ -2,7 +2,7 @@
 
 ## High level 
 
-* Sequencer object -> vector of step objects -> Each step ponits towards single step object
+* Sequencer object -> vector of step objects -> Each step points towards single step object
 
 ## Current Demo / Pics
 todo
@@ -31,6 +31,7 @@ todo
 ## Creating new screens
 todo
 
+## How timing works
 ## Roadmap
 ### Up Next
 
