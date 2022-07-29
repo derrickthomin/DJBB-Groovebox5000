@@ -47,6 +47,7 @@ void setup()
   initOled();
   strip.begin();
   strip.setBrightness(NEOPIX_BRIGHTNESS);
+  draw_cur_seq_oled();
 
   // //------ SD Card
   Sd2Card card;
@@ -76,20 +77,20 @@ void loop()
 
   if (sequencer_1.newNote())
   {
-    sequencer_1.steps[sequencer_1.getLastPlayedStep()].playNote();                             // Last played step is kinda weird. It represents the step we want to play NOW since we already incremented it in newnote.
+    sequencer_1.steps[sequencer_1.getlastPlayedStepIDX()].playNote();                             // Last played step is kinda weird. It represents the step we want to play NOW since we already incremented it in newnote.
     sequencer_1.calcNextNoteTime(true);  
   }
 
   if (sequencer_1.newStep()) 
   { 
     sequencer_1.calcNextNoteTime(false);
-    strip.setPixelColor(sequencer_1.getCurrentStepNumber(), sequencer_1.color);                 // Light Current neopixel
-    strip.setPixelColor(sequencer_1.getPrevStepNumber() , 0);                                   // Clear previous neopixel
-    draw_cur_seq_step(); // update olde DJT TESTIN GZZZZZ
+    strip.setPixelColor(sequencer_1.getCurrentStepIDX(), sequencer_1.color);                 // Light Current neopixel
+    strip.setPixelColor(sequencer_1.getPrevStepIDX() , 0);                                   // Clear previous neopixel
+    advance_cur_seq_step_oled(); // update olde DJT TESTIN GZZZZZ
 
     if (sequencer_1.getPreviousStepState())
     {
-      strip.setPixelColor(sequencer_1.getPrevStepNumber() , sequencer_1.getPreviousStepColor());      // Put previous one back to the on color if needed
+      strip.setPixelColor(sequencer_1.getPrevStepIDX() , sequencer_1.getPreviousStepColor());      // Put previous one back to the on color if needed
     }
 
     sequencer_1.clearPrevPlayingState();

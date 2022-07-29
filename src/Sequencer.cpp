@@ -21,13 +21,12 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
     numSteps             = a;
     bpm                  = b;
     setBpm(b);
-    startingStep         = numSteps - 1;                          // Start at "end" so we don't miss the 1st step
-    currentStep          = startingStep;
+    startStepIDX         = numSteps - 1;                          // Start at "end" so we don't miss the 1st step
+    currentStepIDX          = startStepIDX;
     microsecondsNextStep = microsecondsPerStep;             // Track this separately... may need to apply swing and play a note early or late.    
     microsecondsNextNote = microsecondsPerStep;        
-    curSequencerIDX      = 0;   
+    curSequencerIDX      = 0;
 }
-
 /*
 ********************************     Getters     *********************************
                 
@@ -39,31 +38,31 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
 ********************************************************************************** 
 */
 
-uint8_t  Sequencer::  getStartingStep(void) {return startingStep;}
+uint8_t  Sequencer::  getstartStepIDX(void) {return startStepIDX;}
 bool     Sequencer::  getPlayingState(void) {return playingState;}
-uint8_t  Sequencer::  getLastPlayedStep(void){return lastPlayedStep;}
+uint8_t  Sequencer::  getlastPlayedStepIDX(void){return lastPlayedStepIDX;}
 bool     Sequencer::  getStepStateAtIndex(uint8_t idx){return steps[idx].getStepState();}
-uint8_t  Sequencer::  getCurrentStepNumber(void) {return currentStep;}
+uint8_t  Sequencer::  getCurrentStepIDX(void) {return currentStepIDX;}
 uint8_t  Sequencer::  getNumSteps(void) {return numSteps;}
-bool     Sequencer::  getCurrentStepState(void){return steps[currentStep].getStepState();}
+bool     Sequencer::  getcurrentStepIDXState(void){return steps[currentStepIDX].getStepState();}
 int32_t  Sequencer::  getNextStepSwing(void){return steps[getNextStepNumber()].getSwingMicros();}
-int32_t  Sequencer::  getCurrentStepSwing(void){return steps[getCurrentStepNumber()].getSwingMicros();};
+int32_t  Sequencer::  getcurrentStepIDXSwing(void){return steps[getCurrentStepIDX()].getSwingMicros();};
 bool     Sequencer::  getPlayStateAtIndex(uint8_t idx){return steps[idx].getPlayingState();}
 int32_t  Sequencer::  getStpSwingAtIndex(uint8_t idx){return steps[idx].getSwingMicros();}
 uint32_t Sequencer::  getStepColorAtIndex(uint8_t idx){return steps[idx].getColor();}
-bool     Sequencer::  getPreviousStepState(void) {return steps[getPrevStepNumber()].getStepState();}
+bool     Sequencer::  getPreviousStepState(void) {return steps[getPrevStepIDX()].getStepState();}
 bool     Sequencer::  getNextStepState(void){return steps[getNextStepNumber()].getStepState();}
 
-uint8_t  Sequencer::  getPrevStepNumber(void)
+uint8_t  Sequencer::  getPrevStepIDX(void)
 {
-    if (currentStep == 0) return numSteps - 1;
-    return currentStep - 1;
+    if (currentStepIDX == 0) return numSteps - 1;
+    return currentStepIDX - 1;
 }
 
 uint8_t Sequencer::   getNextStepNumber(void)
 {
-    if (currentStep == numSteps-1) return 0;
-    return currentStep + 1;
+    if (currentStepIDX == numSteps-1) return 0;
+    return currentStepIDX + 1;
 }
 
 Sequencer* Sequencer::getCurrentSequencer(void)
@@ -79,8 +78,8 @@ Sequencer* Sequencer::getCurrentSequencer(void)
 ********************************************************************************** 
 */
 
-void Sequencer::setStepNumber(uint8_t step) {currentStep = step;}
-void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepNumber()].setPlayingState(false);}
+void Sequencer::setStepNumber(uint8_t step) {currentStepIDX = step;}
+void Sequencer::clearPrevPlayingState(void) {steps[getPrevStepIDX()].setPlayingState(false);}
 void Sequencer::setBpm       (uint8_t newbpm)
 {
     if (newbpm > MAX_BPM) newbpm = MAX_BPM;
@@ -165,7 +164,7 @@ bool Sequencer::newStep(void)
 {
     if (seqElapsedMicros >= microsecondsPerStep ){
         seqElapsedMicros = seqElapsedMicros - microsecondsPerStep;
-        currentStep = getNextStepNumber();
+        currentStepIDX = getNextStepNumber();
         return true;
     } 
     return false;
@@ -176,18 +175,24 @@ bool Sequencer::newStep(void)
 bool Sequencer::newNote(void)
 {
     if ((seqElapsedMicros > microsecondsNextNote)){
-        bool current_step_state = getCurrentStepState();
+        bool current_step_state = getcurrentStepIDXState();
         bool next_step_state = getNextStepState();
-        if (current_step_state && !getCurrentStepPlayedState() && getCurrentStepSwing() >= 0){   // Current step active, and hasn't played yet
-            setCurrentStepPlayedState(true);
-            lastPlayedStep = currentStep;
+        if (current_step_state && !getcurrentStepIDXPlayedState() && getcurrentStepIDXSwing() >= 0){   // Current step active, and hasn't played yet. Either on time or late.
+            setcurrentStepIDXPlayedState(true);
+            lastPlayedStepIDX = currentStepIDX;
             return true;
         }
-        if (next_step_state && !getNextStepPlayedState() && getNextStepSwing() < 0){           // Next step active, hits early, and hasn't been played yet.
+        if (next_step_state && !getNextStepPlayedState() && getNextStepSwing() < 0){                   // Next step active, hits early, and hasn't been played yet.
             setNextStepPlayedState(true);
-            lastPlayedStep = getNextStepNumber();
+            lastPlayedStepIDX = getNextStepNumber();
             return true;
         }
+    }
+    // Now deal with ratchet / bonus hits
+    if (bonusHits.size() > 0 && (seqElapsedMicros > bonusHits.front()))
+    {
+        bonusHits.pop();
+        return true;
     }
     return false;
 }
@@ -202,13 +207,28 @@ void Sequencer::initializeSteps(void)
 
 void Sequencer::calcNextNoteTime(bool midStepCalc = false)
 {
+    bool already_played_next = (lastPlayedStepIDX == getNextStepNumber());
+    bool already_played_current = (lastPlayedStepIDX == getCurrentStepIDX());
+
     if (!midStepCalc){                                         // Calculating RIGHT after incrementing the step. 
-        if (getCurrentStepSwing() >= 0){
-            microsecondsNextNote = getCurrentStepSwing();
+
+        if (getcurrentStepIDXSwing() >= 0){
+            microsecondsNextNote = getcurrentStepIDXSwing();
             return;
         }}
 
-    if (midStepCalc){                                          // Calculating right AFTER playng a new note.
+    if (midStepCalc){                                           // Calculating right AFTER playng a new note.                
+        uint8_t ratchetCount = steps[lastPlayedStepIDX].getRatchetCount();                      
+        if (ratchetCount > 0)    // First - deal with ratchets. Add to the ratchet micros vector if we need to.
+        {   
+            unsigned long ratchet_micros = microsecondsPerStep / ratchetCount;
+            for (uint8_t i = 1; i < ratchetCount + 1; i++)
+            {
+                unsigned long next_ratchet_micros = seqElapsedMicros + ratchet_micros * i;
+                if (next_ratchet_micros < microsecondsPerStep) bonusHits.push(next_ratchet_micros); // Don't go past next step.
+            }
+        }
+        
         if (!getNextStepState()){                              // Next step isn't even on.. punt
             microsecondsNextNote = microsecondsPerStep * 2; 
             return;
@@ -217,8 +237,7 @@ void Sequencer::calcNextNoteTime(bool midStepCalc = false)
             microsecondsNextNote = microsecondsPerStep * 2;                  
             return;
         }
-        bool already_played_next = (lastPlayedStep == getNextStepNumber());
-        bool already_played_current = (lastPlayedStep == getCurrentStepNumber());
+
         if (already_played_next){
             microsecondsNextNote = microsecondsPerStep * 2;
             return;
@@ -236,7 +255,8 @@ void Sequencer::reset(void){
     for (uint8_t i = 0; i < numSteps; i++){
         (getStepStateAtIndex(i)) ? strip.setPixelColor(i, getStepColorAtIndex(i)) : strip.setPixelColor(i, 0);
     }
-    currentStep = startingStep;
+    currentStepIDX = startStepIDX;
+    draw_cur_seq_oled();
 }
 
 void Sequencer::resetSwing(void)
@@ -299,11 +319,11 @@ void Sequencer::debugPrintSeqData(String message, bool extraSpace = false, bool 
     Serial.println("");
     Serial.println("      [ Step Level Info ]     ");
     Serial.println("");
-    Serial.println("current Step: \t" + String(getCurrentStepNumber()));
-    Serial.println("Last played step \t" + String(lastPlayedStep));
-    Serial.println("current Step State: \t" + String(getCurrentStepState()));
+    Serial.println("current Step: \t" + String(getCurrentStepIDX()));
+    Serial.println("Last played step \t" + String(lastPlayedStepIDX));
+    Serial.println("current Step State: \t" + String(getcurrentStepIDXState()));
     Serial.println("Previous Step State: \t" + String(getPreviousStepState()));
     Serial.println("Next Step State: \t" + String(getNextStepState()));
-    Serial.println("Current Step Swing: \t" + String(getCurrentStepSwing()));
+    Serial.println("Current Step Swing: \t" + String(getcurrentStepIDXSwing()));
     Serial.println("Next Step Swing: \t" + String(getNextStepSwing()));
 }

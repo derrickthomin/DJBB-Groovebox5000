@@ -18,7 +18,8 @@ class Step {
         uint16_t release;
         uint8_t  reverbSendLevel;  
         uint8_t  delaySendLevel;
-        uint8_t  ratchetCount;
+        uint8_t  ratchetCount;             // 3 = Play note 3 times before next step
+        //uint8_t  ratchetsLeft;             // Track how many hits have been played per cycle.
         uint8_t  assignedVoice;            // Track which voice to use when this hits.
         uint32_t color;
         uint8_t  colorSetIDXstp;
@@ -51,6 +52,7 @@ class Step {
         uint32_t getColor       (void){return color;}
         uint8_t  getVoiceNumber (void){return voice -> getID();}
         uint16_t getVoiceAttack (void){return voice -> getAttack();}
+        uint8_t  getRatchetCount(void){return ratchetCount;}
 
         // -------- Setters --------//  ---- ALL expect an input of 0 - 100.
         void setColor          (uint32_t colour){color = colour;}

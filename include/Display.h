@@ -29,7 +29,6 @@ class Screen
         std::vector<std::vector<const char*>>  inputLabelBanksStep;
         std::vector<std::vector<callback>>     inputFuncionBanksGlobal;
         std::vector<std::vector<callbackStep>> inputFunctionBanksStep;
-
         std::vector<const char*>               inputLabelBankGlobal_current;
         std::vector<const char*>               inputLabelBankStep_current;
         std::vector<callback>                  inputFunctionBankGlobal_current;
@@ -105,11 +104,13 @@ void refreshInputDisp(void);
 ************************************************************************************
 */
 
-void draw_seq_outline(void); 
-void draw_cur_seq_step(void);
+void draw_cur_seq_oled(void); 
+void advance_cur_seq_step_oled(void);
 void draw_step_held_arrow_at_IDX(uint8_t idx, uint16_t color);
 void get_disp_seq_step_x_IDX(uint8_t idx);
 void clear_step_arrows_ALL(void);
+void draw_erase_step_at_IDX_oled(uint8_t idx, bool drawErase = true);
+uint8_t get_step_disp_x_pos(uint8_t step_IDX);
 
 /*
 ***************** Helper / Testing Functions *******************

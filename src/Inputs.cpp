@@ -188,11 +188,18 @@ void processInputs(Sequencer& seq)
   // -- Process Sequecer buttons -- //
   for (uint8_t i = 0; i < seq.getNumSteps(); i++)
   {
-    //   1)  new quck press - set or remove a step
+    //   1)  new quck press - set or remove a step, update display stuff
     if (seqButtonsNewQuickpress[i]) 
     {
       seq.stepFlipStateAtIndex(i);
-      (seq.getStepStateAtIndex(i)) ? strip.setPixelColor(i, seq.getStepColorAtIndex(i)) : strip.setPixelColor(i  , 0);
+      if (seq.getStepStateAtIndex(i))
+      {
+        strip.setPixelColor(i, seq.getStepColorAtIndex(i));
+        draw_erase_step_at_IDX_oled(i, true);
+      } else {
+        strip.setPixelColor(i  , 0);
+        draw_erase_step_at_IDX_oled(i, false);
+      }
       seqButtonsNewQuickpress[i] = false;            
     }
 
@@ -251,6 +258,12 @@ void processInputs(Sequencer& seq)
         
         update_slider_display_val_IDX(input_idx);
         run_input_change_function_step(seq, input_idx, i);
+      }
+
+      // DJT - TESITNG FOR NOW. Need to track next voice globally.
+      if (joystickYChanged())
+      {
+        seq.steps[i].assignVoice(Voice::allVoices[0]);
       }
     }
   }
@@ -324,12 +337,12 @@ void processInputs(Sequencer& seq)
   }
   if (joystickXChanged() || joystickYChanged())
   {
-    uint16_t x = map(int(joystickXVal()),0,100,0,SCREEN_WIDTH);
-    uint16_t y = map(int(joystickYVal()),0,100,0,SCREEN_WIDTH);
-    drawNoteSymbol(joystickGuiLastX, joystickGuiLastY,2,BLACK);
-    drawNoteSymbol(x,y,2,RED_5);
-    joystickGuiLastX = x;
-    joystickGuiLastY = y;
+    // uint16_t x = map(int(joystickXVal()),0,100,0,SCREEN_WIDTH);
+    // uint16_t y = map(int(joystickYVal()),0,100,0,SCREEN_WIDTH);
+    // drawNoteSymbol(joystickGuiLastX, joystickGuiLastY,2,BLACK);
+    // drawNoteSymbol(x,y,2,RED_5);
+    // joystickGuiLastX = x;
+    // joystickGuiLastY = y;
   }
 }
 

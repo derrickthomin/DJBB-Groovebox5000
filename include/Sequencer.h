@@ -2,6 +2,7 @@
 //#include "Inputs.h"
 #include <Adafruit_NeoPixel.h>
 #include <vector>
+#include <queue>
 #include "Common.h"
 #include "Audiostuff.h"
 #include "settings.h"
@@ -19,10 +20,10 @@ class Sequencer {
         bool          playingState;              // Is the sequencer currently playing
         bool          stepPlayed;                // Track if we already played a note for this step
         uint8_t       numSteps;
-        uint8_t       currentStep;
-        int8_t        lastPlayedStep;
+        uint8_t       currentStepIDX;
+        int8_t        lastPlayedStepIDX;
         uint8_t       bpm;
-        uint8_t       startingStep;
+        uint8_t       startStepIDX;
         int32_t       microsecondsNextStep;      // djt - do we need this? prob not...
         uint32_t      microsecondsNextNote;      // Because of swing or other future FX, we may want hit early or late (out of sync with actual step)
         uint32_t      maxSwingMicros;            // Max swing allowed based on microsecs per step
@@ -31,6 +32,7 @@ class Sequencer {
     public:
         Sequencer(uint8_t, uint8_t);
         std::vector<Step> steps;
+        std::queue<uint32_t> bonusHits;         // Store relative timing for any "bonus" hits, such as ratchet hits.
         static std::vector<Sequencer*> allSequencers;
         int8_t colorSetIDX;                // corresponsds to a set of 5 colors
         uint32_t color;                    // Color of the scrolling seq light
@@ -47,31 +49,31 @@ class Sequencer {
 
         // -------- Getters --------//
         static  Sequencer* getCurrentSequencer(void);               // Return the current sequencer 
-        uint8_t getStartingStep(void);
+        uint8_t getstartStepIDX(void);
         bool    getPlayingState(void);
-        uint8_t getLastPlayedStep(void);
+        uint8_t getlastPlayedStepIDX(void);
         bool    getStepStateAtIndex(uint8_t idx);
-        uint8_t getCurrentStepNumber(void);
+        uint8_t getCurrentStepIDX(void);
         uint8_t getNumSteps(void);
-        bool    getCurrentStepState(void);
+        bool    getcurrentStepIDXState(void);
         bool    getPreviousStepState(void);
         bool    getNextStepState(void);
         uint8_t getNextStepNumber(void);
-        uint8_t getPrevStepNumber(void);
+        uint8_t getPrevStepIDX(void);
         int32_t getNextStepSwing(void);        // Get the millis offset for the next step (pos or neg)
-        int32_t getCurrentStepSwing(void);     // Get swing value of current step (pos or neg)
+        int32_t getcurrentStepIDXSwing(void);     // Get swing value of current step (pos or neg)
         int32_t getStpSwingAtIndex(uint8_t idx);
-        uint8_t getCurrentStepVoice(void){return steps[getCurrentStepNumber()].getVoiceNumber()-1;}
+        uint8_t getcurrentStepIDXVoice(void){return steps[getCurrentStepIDX()].getVoiceNumber()-1;}
         
         int32_t getDefaultStepColor(void){return defaultStepColor;}  // All steps are the same color... just return the color of the 1st
-        int32_t getCurrentStepColor(void){return steps[currentStep].getColor();}
-        int32_t getPreviousStepColor(void){return steps[getPrevStepNumber()].getColor();}
+        int32_t getcurrentStepIDXColor(void){return steps[currentStepIDX].getColor();}
+        int32_t getPreviousStepColor(void){return steps[getPrevStepIDX()].getColor();}
 
         bool    getPlayStateAtIndex(uint8_t idx);
-        bool    getCurrentStepPlayedState(void){return steps[currentStep].getPlayingState();}
+        bool    getcurrentStepIDXPlayedState(void){return steps[currentStepIDX].getPlayingState();}
         bool    getNextStepPlayedState(void){return steps[getNextStepNumber()].getPlayingState();}
 
-        uint16_t  getCurrentVoiceAttack(void){return steps[getCurrentStepNumber()].getVoiceAttack();}
+        uint16_t  getCurrentVoiceAttack(void){return steps[getCurrentStepIDX()].getVoiceAttack();}
         uint32_t  getStepColorAtIndex(uint8_t idx);
 
 
@@ -80,7 +82,7 @@ class Sequencer {
         void setStepNumber(uint8_t step);
         void flipPlayState(void);
         void resetCounter(void);
-        void setCurrentStepPlayedState(bool state){steps[currentStep].setPlayingState(state);}
+        void setcurrentStepIDXPlayedState(bool state){steps[currentStepIDX].setPlayingState(state);}
         void setNextStepPlayedState(bool state){steps[getNextStepNumber()].setPlayingState(state);}
         
         // -------> Index Funcions

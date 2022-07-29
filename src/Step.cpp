@@ -16,7 +16,8 @@ Step::Step(uint8_t colorSetIDX)
     reverbSendLevel  = 0;  
     delaySendLevel   = 0;
     ratchetCount     = 0;
-    assignedVoice    = 1;         // Track which voice to use when this hits. z
+    //ratchetsLeft     = ratchetCount;  // DJT - Decision: don't deal with swing. Just cut off if you get to the next step.
+    assignedVoice    = 1;             // Track which voice to use when this hits. z
     colorSetIDXstp   = colorSetIDX;
     color            = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
 
@@ -92,7 +93,11 @@ void Step::setAttack        (uint8_t val) {attack =  map(val, 0, 100, MIN_ATTACK
 void Step::setRelease       (uint8_t val) {release = map(val, 0, 100, MIN_RELEASE, MAX_RELEASE);}
 void Step::setDecay         (uint8_t val) {decay =   map(val, 0, 100, MIN_DECAY, MAX_DECAY);}
 void Step::setSustain       (uint8_t val) {sustain = map(val, 0, 100, MIN_SUSTAIN, MAX_SUSTAIN);}
-void Step::setRatchetCount  (uint8_t val) {ratchetCount = map(val, 0, 100, MIN_RATCHET, MAX_RATCHET);}
+void Step::setRatchetCount  (uint8_t val) 
+{
+    ratchetCount = map(val, 0, 100, MIN_RATCHET, MAX_RATCHET);
+}
+
 void Step::setVolume        (uint8_t val) 
 {
     volume = float(map(float(val),0.0,100.0,MIN_VOICE_VOL,MAX_VOICE_VOL));

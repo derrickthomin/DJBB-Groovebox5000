@@ -131,13 +131,8 @@ const uint8_t seq_disp_y  = 60;
 const uint8_t stepWidth = (SCREEN_WIDTH / 16) - 3;
 const uint8_t stepDispSpacing = 3;
 
-
-
-
-
 #pragma endregion
 std::vector<Screen> screens;
-
 
 /*
 *************************** Initialization **************************
@@ -175,8 +170,8 @@ void initScreens(void)
     // screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_drumLen, cb_set_swing, cb_set_drumMix2, cb_set_drumFreq, cb_set_drumPMod);
     // screens[0].addInputLabelBankStep      ("vol", "len","swng","2x","freq","p-mod");
 
-    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_attack, cb_set_decay, cb_set_swing, VOIDCALLBACKSTEP, VOIDCALLBACKSTEP);
-    screens[0].addInputLabelBankStep      ("vol", "atk","rel","swng"," - "," - ");
+    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_attack, cb_set_decay, cb_set_swing, cb_set_ratchet, VOIDCALLBACKSTEP);
+    screens[0].addInputLabelBankStep      ("vol", "atk","rel","swng","rtcht"," - ");
 
     screens[0].changeBankGlobal           (-1);   // Acts kind of like an initializer.. current bank members not set before this
     screens[0].changeBankStep             (-1);
@@ -197,16 +192,6 @@ void initScreens(void)
 void drawCurrentTitleBar(void)
 {
     screens[currentScreenIDX].drawTitleBarMnu();
-}
-
-void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size, int color)
-{
-    uint16_t radius = size * 2;
-    uint8_t lineX_start = x + radius;
-    uint8_t line_height = 10 * size;
-
-    oled.fillCircle(x, y, radius, color);
-    oled.drawFastVLine(lineX_start, y - line_height, line_height, color);
 }
 
 void drawInfoBar(const char * text, int16_t displayVal)
@@ -577,33 +562,67 @@ void run_input_change_function_step(Sequencer& seq, uint8_t input_idx, uint8_t s
 ************************************************************************************
 */
 
-void draw_seq_outline(void)
+void draw_cur_seq_oled(void)
 {
     uint8_t x = stepDispSpacing;
+    uint16_t color = colors[Sequencer::getCurrentSequencer()->colorSetIDX][4];
     for (uint8_t i = 0; i < 16; i++)
     {
-        oled.drawRect(x, seq_disp_y, stepWidth, stepWidth, colors[Sequencer::getCurrentSequencer()->colorSetIDX][4]);
+        if (Sequencer::getCurrentSequencer()->getStepStateAtIndex(i))
+        {
+            oled.fillRect(x, seq_disp_y, stepWidth, stepWidth, color);
+        }
+
+        oled.drawFastHLine(x, seq_disp_y + stepWidth + 1, stepWidth, color);   // Underlines
         x += stepDispSpacing + stepWidth;
     }
 }
 
 // Draw the current step, erase the last'n
-void draw_cur_seq_step(void)
+void advance_cur_seq_step_oled(void)
 {
-    uint8_t cur_step_num  = Sequencer::getCurrentSequencer() -> getCurrentStepNumber();
-    uint8_t x = stepDispSpacing + (stepWidth + stepDispSpacing) * cur_step_num;
-    uint8_t prevx;
+    uint8_t x = get_step_disp_x_pos(Sequencer::getCurrentSequencer() -> getCurrentStepIDX());
+    uint8_t prevx = get_step_disp_x_pos(Sequencer::getCurrentSequencer() -> getPrevStepIDX());
     uint16_t color = colors[Sequencer::getCurrentSequencer()->colorSetIDX][4];
-    if (cur_step_num == 0){  // On the first step displayed.
-        prevx = stepDispSpacing + ((stepWidth + stepDispSpacing) * 15);
-    } else {
-        prevx = x - stepWidth - stepDispSpacing;
-    }      
-
-    oled.fillRect(x, seq_disp_y, stepWidth + 1, stepWidth + 1, color);
-    oled.fillRect(prevx, seq_disp_y, stepWidth+1, stepWidth+1, BLACK);
-    oled.drawRect(prevx, seq_disp_y, stepWidth+1, stepWidth+1, color);
+    oled.drawFastHLine(x, seq_disp_y + stepWidth + 2, stepWidth, color);
+    oled.drawFastHLine(x, seq_disp_y + stepWidth + 3, stepWidth, color);
+    oled.drawFastHLine(prevx, seq_disp_y + stepWidth + 2, stepWidth, BLACK);
+    oled.drawFastHLine(prevx, seq_disp_y + stepWidth + 3, stepWidth, BLACK);
 }
+
+// Draws a step on the oled (filled in square) or erases.
+void draw_erase_step_at_IDX_oled(uint8_t idx, bool drawErase)
+{
+    uint16_t color;
+    uint8_t x = get_step_disp_x_pos(idx);
+
+    (drawErase) ? color = colors[Sequencer::getCurrentSequencer()->colorSetIDX][4] : color = BLACK;
+    oled.fillRect(get_step_disp_x_pos(idx), seq_disp_y, stepWidth, stepWidth, color);
+}
+
+// Deal with the fact that we can only display 16 steps on the screen.
+// Returns: X position of the left side of the step IDX passed in
+uint8_t get_step_disp_x_pos(uint8_t step_IDX)
+{
+    if (step_IDX  > 15) get_step_disp_x_pos(step_IDX - 16);    // Want a number between 0 - 15.. recursively get there
+
+    //uint8_t x = stepDispSpacing + (stepWidth + stepDispSpacing) * step_IDX;
+    return stepDispSpacing + (stepWidth + stepDispSpacing) * step_IDX;
+}
+
+// Given the current step position, calculate the previous. Useful for clearing prev step display.
+// uint8_t get_prev_step_disp_x_pos(uint8_t step_IDX)
+// {
+//     if (step_IDX  > 15) get_step_disp_x_pos(step_IDX - 16);    // Want a number between 0 - 15.. recursively get there
+
+//     uint8_t prev_x;
+//     if (step_IDX == 0){  // On the first step displayed.
+//         prev_x = stepDispSpacing + ((stepWidth + stepDispSpacing) * 15);
+//     } else {
+//         prev_x = x - stepWidth - stepDispSpacing;
+//     } 
+//     return prev_x;
+// }
 
 // Draw a straight arrow.
 void draw_arrow(uint8_t tip_x, uint8_t tip_y, uint8_t len, uint16_t color, uint8_t dir)
@@ -696,6 +715,16 @@ void FUNderline(uint8_t startX, uint8_t startY, uint8_t length, uint16_t color)
     } 
 }
 
+void drawNoteSymbol(uint16_t x, uint16_t y, uint8_t size, int color)
+{
+    uint16_t radius = size * 2;
+    uint8_t lineX_start = x + radius;
+    uint8_t line_height = 10 * size;
+
+    oled.fillCircle(x, y, radius, color);
+    oled.drawFastVLine(lineX_start, y - line_height, line_height, color);
+}
+
 void VOIDCALLBACK(int idx)
 {
     Serial.println("Void Callback called. No action taken.");
@@ -704,6 +733,12 @@ void VOIDCALLBACK(int idx)
 void VOIDCALLBACKSTEP(Sequencer& seq, uint8_t idx, uint8_t step)
 {
     Serial.println("Void Callback STEP called. No action taken.");
+}
+
+// DJT - DO DIS DO DIXSSSSS
+void convertToDisplayval(char* outStr[6], uint16_t val)
+{
+    //
 }
 
 void z_showAllColors(void)

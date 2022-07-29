@@ -25,7 +25,7 @@
 #define DEFAULT_CRUSH_BITDEPTH  16
 #define DEFAULT_CRUSH_FREQ      44100
 #define DEFAULT_NOISE_LVL       0.5
-#define DEFAULT_DRUM_FREQ       300
+#define DEFAULT_DRUM_FREQ       120
 #define DEFAULT_DRUM_PMOD       0.6
 #define DEFAULT_DRUM_LENGTH     100
 #define DEFAULT_DRUM_MIX2       0 
