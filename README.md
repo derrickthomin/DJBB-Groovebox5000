@@ -38,6 +38,8 @@ todo
 none
 
 ### Brain dump
+Everything I can think of, realistic or not. Can pull from this into up next.
+
 - Global FX
 - Per step fx sends
 - Jumps (specify a jump from step X to Y ever Z sequence plays)
@@ -62,3 +64,10 @@ none
 - Ability to swap files in sample voice (list of SD card files, select)
 - Add RAW audio files of some small primatives (little clicks, transients, other small samples)
 - - Raw as in just an H file with the data ary
+- LFOs
+- Variable speed sample playback
+- Reverse mode
+- Additional sequencer types (euclidian, etc.)
+- Mic record in to step (record to SD, assign to sample voice for current step)
+- Param reset support (some way to clear a param / go back to default)
+-  - Also a way to clear ALL params from a step
