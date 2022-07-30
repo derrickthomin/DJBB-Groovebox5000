@@ -33,10 +33,10 @@ todo
 
 ## Roadmap
 ### Up Next
-Priority to features that affect the rhythm / groove, since that's what I'm hoping to hone in on.
+todo
 
 ### Completed
-none
+todo
 
 ### Brain dump
 Everything I can think of, realistic or not. Can pull from this into up next.
