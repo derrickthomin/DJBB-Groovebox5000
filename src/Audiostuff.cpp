@@ -191,11 +191,11 @@ void initAudio(void){
   sgtl5000_1.lineOutLevel(13);
 
   //new Voice(&playSdWav1, &envelope1_L, &envelope1_R);  // djt - jjust for testing... make a few and put into array 
-  // new Voice(&pink1, &envelope5_L, &envelope5_R, &amp_noise_L1, &amp_noise_R1, &filter_noise_L1, &filter_noise_R1, &bitcrush_noise_L1, &bitcrush_noise_R1);  // djt - jjust for testing... make a few and put into array
+   //new Voice(&pink1, &envelope5_L, &envelope5_R, &amp_noise_L1, &amp_noise_R1, &filter_noise_L1, &filter_noise_R1, &bitcrush_noise_L1, &bitcrush_noise_R1);  // djt - jjust for testing... make a few and put into array
   new Voice(&drum1, &envelope_Drum1, &amp_drum_1, &bitcrusher_drum1, &filter_drum1); 
   //new Voice(&drum2, &envelope_Drum2, &amp_drum_2, &bitcrusher_drum2, &filter_drum2); 
   //new Voice(&drum3, &envelope_Drum3, &amp_drum_3, &bitcrusher_drum3, &filter_drum3); 
-  new Voice(&playSdWav1, &envelope1_L, &envelope1_R, &amp_samplr_L1, &amp_samplr_R1);  // djt - jjust for testing... make a few and put into array
+  //new Voice(&playSdWav1, &envelope1_L, &envelope1_R, &amp_samplr_L1, &amp_samplr_R1);  // djt - jjust for testing... make a few and put into array
 
   AudioInterrupts();
 }

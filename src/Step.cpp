@@ -3,20 +3,20 @@
 #include "Inputs.h"
 #include "Display.h"
 
-Step::Step(uint8_t colorSetIDX)
-{
+Step::Step(uint8_t colorSetIDX, Sequencer* seq)
+{     
+    parentSeq        = seq;
     state            = false;
     played           = false;
     volume           = 0.3;
     swingMcros       = 0;            // How much swing to apply (positive or negative to hit early or late.)
     attack           = 0;
-    release          = 500;
-    decay            = 500;
+    release          = 100;
+    decay            = 100;
     sustain          = 0; 
     reverbSendLevel  = 0;  
     delaySendLevel   = 0;
     ratchetCount     = 0;
-    //ratchetsLeft     = ratchetCount;  // DJT - Decision: don't deal with swing. Just cut off if you get to the next step.
     assignedVoice    = 1;             // Track which voice to use when this hits. z
     colorSetIDXstp   = colorSetIDX;
     color            = get_neopix_color_by_idx(colorSetIDX, 1);  // Same color as sequencer, but darker
@@ -35,6 +35,12 @@ Step::Step(uint8_t colorSetIDX)
     drumPMod         = DEFAULT_DRUM_PMOD;             // Pitch mod
     drum2ndHitMix    = DEFAULT_DRUM_MIX2;             // Level of 2nd hit
 
+    // DJT TESSSTINGG
+    release_mod_vals.push_back(10);
+    release_mod_interval.push_back(2);     // every 2 steps
+    volume_mod_vals.push_back(0.2);
+    volume_mod_interval.push_back(3);     // every 2 steps
+
 }
 
 /*
@@ -48,16 +54,41 @@ void Step::playNote(void)
     Serial.println("in Step::playnote");
     Serial.println(getSwingMicros());
 
-    // Update voice settings for this step
-    // djt - prob reset to default after playing??
-    // djt - check to make sure the val is different before changing??
+//  ----- Deal with overrides ------  //
+    uint16_t loopCount  = parentSeq -> loopCount;
+    uint16_t decay_tmp  = decay;                // Initialize some vars 
+    float    volume_tmp = volume;               // Initialize some vars 
+    
+    // Release Overrides
+    if (release_mod_interval.size() && loopCount > 1)
+    {
+        for (uint8_t i = 0; i < release_mod_interval.size(); i++)
+        {
+            if (!(loopCount % release_mod_interval[i]))
+            {
+                decay_tmp = release_mod_vals[i];
+            }
+        }
+    }
+
+    // Volume Overrides
+    if (volume_mod_interval.size() && loopCount > 1)
+    {
+        for (uint8_t i = 0; i < volume_mod_interval.size(); i++)
+        {
+            if (!(loopCount % volume_mod_interval[i]))
+            {
+                volume_tmp = volume_mod_vals[i];
+            }
+        }
+    }
 
     AudioNoInterrupts(); // All Voices
     voice->setAttack(attack);
-    voice->setDecay(decay);
+    voice->setDecay(decay_tmp);
     voice->setSustain(sustain);
-    voice->setRelease(release);
-    voice->setVolume(volume);
+    voice->setRelease(decay_tmp);
+    voice->setVolume(volume_tmp);
 
     switch (voice->getType())
     {

@@ -170,10 +170,10 @@ void initScreens(void)
     // screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_drumLen, cb_set_swing, cb_set_drumMix2, cb_set_drumFreq, cb_set_drumPMod);
     // screens[0].addInputLabelBankStep      ("vol", "len","swng","2x","freq","p-mod");
 
-    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_attack, cb_set_decay, cb_set_swing, cb_set_ratchet, VOIDCALLBACKSTEP);
+    screens[0].addInputFunctionBankStep   (cb_set_volume, cb_set_attack, cb_set_decay, cb_set_swing, cb_set_ratchet, cb_set_drumFreq);
     screens[0].addInputLabelBankStep      ("vol", "atk","rel","swng","rtcht"," - ");
 
-    screens[0].changeBankGlobal           (-1);   // Acts kind of like an initializer.. current bank members not set before this
+    screens[0].changeBankGlobal           (-1);   // Acts kind of l ike an initializer.. current bank members not set before this
     screens[0].changeBankStep             (-1);
 
     // Screen #2

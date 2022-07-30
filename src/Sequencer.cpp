@@ -22,10 +22,11 @@ Sequencer::Sequencer(uint8_t a, uint8_t b)
     bpm                  = b;
     setBpm(b);
     startStepIDX         = numSteps - 1;                          // Start at "end" so we don't miss the 1st step
-    currentStepIDX          = startStepIDX;
-    microsecondsNextStep = microsecondsPerStep;             // Track this separately... may need to apply swing and play a note early or late.    
+    currentStepIDX       = startStepIDX;
+    microsecondsNextStep = microsecondsPerStep;                   // Track this separately... may need to apply swing and play a note early or late.    
     microsecondsNextNote = microsecondsPerStep;        
     curSequencerIDX      = 0;
+    loopCount            = 1;
 }
 /*
 ********************************     Getters     *********************************
@@ -61,7 +62,7 @@ uint8_t  Sequencer::  getPrevStepIDX(void)
 
 uint8_t Sequencer::   getNextStepNumber(void)
 {
-    if (currentStepIDX == numSteps-1) return 0;
+    if (currentStepIDX >= numSteps - 1) return 0;
     return currentStepIDX + 1;
 }
 
@@ -165,6 +166,7 @@ bool Sequencer::newStep(void)
     if (seqElapsedMicros >= microsecondsPerStep ){
         seqElapsedMicros = seqElapsedMicros - microsecondsPerStep;
         currentStepIDX = getNextStepNumber();
+        if (currentStepIDX == startStepIDX) loopCount++;
         return true;
     } 
     return false;
@@ -201,7 +203,7 @@ void Sequencer::initializeSteps(void)
 {
     for (uint8_t i = 0; i < numSteps; i++) 
     {
-       steps.push_back(Step(Sequencer::colorSetIDX));
+       steps.push_back(Step(Sequencer::colorSetIDX, this));
     }
 }
 
@@ -256,6 +258,7 @@ void Sequencer::reset(void){
         (getStepStateAtIndex(i)) ? strip.setPixelColor(i, getStepColorAtIndex(i)) : strip.setPixelColor(i, 0);
     }
     currentStepIDX = startStepIDX;
+    loopCount = 1;
     draw_cur_seq_oled();
 }
 

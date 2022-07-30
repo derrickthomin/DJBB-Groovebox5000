@@ -31,6 +31,7 @@ class Sequencer {
 
     public:
         Sequencer(uint8_t, uint8_t);
+        uint16_t loopCount;                    // How many times have we loopd the sequence
         std::vector<Step> steps;
         std::queue<uint32_t> bonusHits;         // Store relative timing for any "bonus" hits, such as ratchet hits.
         static std::vector<Sequencer*> allSequencers;

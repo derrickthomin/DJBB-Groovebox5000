@@ -8,6 +8,7 @@
 class Step {
     private:
         Voice*   voice;                    // Store pointer to a voice object
+        Sequencer* parentSeq;              // Pointer to the parent sequencer.
         bool     state;                     // Is it on or nah?
         bool     played;                    // True if played, false if not. Resets when loops around.
         float    volume;
@@ -39,9 +40,15 @@ class Step {
         float    filter_HP_amt;           // DJT IMPLEMENT ME... need to figure out how ot handl ethe mixer inputs..  dont want too many params to voice constructor   
     
     public:
-        Step(uint8_t colorSetIDX);
 
-        void     playNote(void);          // Play note from the current voice
+        std::vector<uint16_t> release_mod_vals; // Array to store alternate release times. Use in conjunction with below
+        std::vector<uint8_t>  release_mod_interval; // 0 = never, 1 = every loop, 2 = every 2 loops, etc... 
+        std::vector<float>  volume_mod_vals;
+        std::vector<uint16_t>  volume_mod_interval;
+
+        Step(uint8_t colorSetIDX, Sequencer* seq);
+
+        void     playNote(void);               // Play note from the current voice
         void     assignVoice(Voice* vOice){voice = vOice;}
 
         // -------- Getters --------//
