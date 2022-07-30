@@ -1,8 +1,8 @@
 # DJBB-Groovebox5000
 Little groovebox that I'm still working on. The plan is to focus on features that increse the rythmic fun (as opposed to sound design-y features.. so think timing features, probability, swing, etc.). I'm slowly realizing that it's not the sounds - quality OR timbre - that really make a track, it's the rythm, so we shall focus on this.
 
-## Current Demo
-todo
+## Demos
+https://www.youtube.com/shorts/VS3Zzbqb1rc
 
 ## Objects and how they interact
 ### Sequencer
